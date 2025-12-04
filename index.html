@@ -219,13 +219,30 @@
       margin-top: 16px;
       padding: 10px 12px;
       border-radius: 999px;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       display: flex;
-      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
       align-items: center;
       background: radial-gradient(circle at left, rgba(56, 189, 248, 0.12), transparent),
                   rgba(15, 23, 42, 0.9);
       border: 1px solid rgba(75, 85, 99, 0.8);
+    }
+
+    .status-text {
+      flex: 1;
+      min-width: 200px;
+      line-height: 1.4;
+    }
+
+    .status-actions-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex: 1;
+      flex-wrap: wrap;
+      min-width: 240px;
     }
 
     .status-danger {
@@ -480,6 +497,11 @@
       color: var(--text-soft);
       font-size: 0.9rem;
       line-height: 1.5;
+      display: none;
+    }
+
+    .info-panel.visible {
+      display: block;
     }
 
     .info-panel h3 {
@@ -535,10 +557,40 @@
       100% { transform: rotate(360deg) scale(1); opacity: 0.7; }
     }
 
+    @keyframes cardFlash {
+      0% { transform: scale(1); box-shadow: 0 16px 40px rgba(0,0,0,0.9); }
+      50% { transform: scale(1.04); box-shadow: 0 18px 48px rgba(56, 189, 248, 0.35); }
+      100% { transform: scale(1); box-shadow: 0 16px 40px rgba(0,0,0,0.9); }
+    }
+
+    .card-display.card-flash {
+      animation: cardFlash 0.35s ease;
+    }
+
     @media (max-width: 768px) {
       .card-shell { padding: 16px; }
       .card-display { width: 140px; height: 190px; }
       .card-value { font-size: 3.2rem; }
+    }
+
+    @media (max-width: 600px) {
+      .card-area {
+        justify-content: center;
+        align-items: stretch;
+      }
+
+      .guess-row.two-col {
+        flex-wrap: nowrap;
+      }
+
+      .guess-row.single .guess-btn {
+        width: 100%;
+      }
+
+      .guess-btn {
+        font-size: 0.95rem;
+        padding: 10px 14px;
+      }
     }
   </style>
 </head>
@@ -632,8 +684,13 @@
       </div>
 
       <div class="status-banner">
-        <div id="status-text">Oyun henüz başlamadı.</div>
-        <div id="status-actions"></div>
+        <div id="status-text" class="status-text">Oyun henüz başlamadı.</div>
+        <div class="status-actions-wrap">
+          <button id="help-toggle-btn" class="secondary" style="margin-left:8px;">
+            ❓ <span id="help-toggle-text">Yardım / Nasıl Oynanır</span>
+          </button>
+          <div id="status-actions"></div>
+        </div>
       </div>
 
       <div class="card-panel">
@@ -655,15 +712,17 @@
             </div>
           </div>
           <div class="guess-buttons">
-            <div class="guess-row">
+            <div class="guess-row two-col">
               <button class="guess-btn higher" id="btn-guess-higher">
                 🔺 <span id="btn-higher-text">Daha Yüksek</span>
               </button>
               <button class="guess-btn lower" id="btn-guess-lower">
                 🔻 <span id="btn-lower-text">Daha Alçak</span>
               </button>
+            </div>
+            <div class="guess-row single">
               <button class="guess-btn same" id="btn-guess-same">
-                ⭕ <span id="btn-same-text">Aynı (0 gelir)</span>
+                ⭕ <span id="btn-same-text">Aynı kart gelir</span>
               </button>
             </div>
             <div class="guess-row" style="align-items:center;">
@@ -692,9 +751,9 @@
             <h3>Nasıl Oynanır?</h3>
             <ul style="margin:0 0 6px 16px; padding:0; color:var(--text-soft);">
               <li>1-21 numaralı kartlarla oynanır. Önce mevcut kart açılır.</li>
-              <li>Süre içinde bir sonraki kartın daha <strong>yüksek</strong>, <strong>düşük</strong> ya da <strong>aynı</strong> (0 gelir) olacağını tahmin et.</li>
+              <li>Süre içinde bir sonraki kartın daha <strong>yüksek</strong>, <strong>düşük</strong> ya da <strong>aynı</strong> (aynı kart gelir) olacağını tahmin et.</li>
               <li>Kartın değerine göre yüksek/düşük tahmini güvenli veya riskli sayılır; riskli doğru tahmin yüksek puan getirir, yanlış tahmin ceza yazabilir.</li>
-              <li>"0 gelir" tahmini çok risklidir: tutarsa büyük ödül, tutmazsa ekstra ceza.</li>
+              <li>"Aynı kart gelir" tahmini çok risklidir: tutarsa büyük ödül, tutmazsa ekstra ceza.</li>
               <li>Tahmin etmeyen oyuncular küçük bir ceza alır.</li>
               <li>Art arda doğru bildikçe combo çarpanı artar; seri 3 olunca kalkan kazanırsın, ilk hatanda cezayı emer.</li>
               <li>Oda kurulurken belirlenen hedef puana ilk ulaşan kazanır.</li>
@@ -703,7 +762,7 @@
           </div>
           <div>
             <h3>How to Play (Short English)</h3>
-            <p style="margin:0;">Cards are numbered 1-21. Each round you guess if the next card is higher, lower, or exactly the same ("0 comes"). Safer vs risky guesses change the points. Correct "same" is rare but gives a big bonus; wrong guesses penalize you. Consecutive correct answers build a combo multiplier and can grant a one-time shield. No gambling or real prizes here—just a free brain-training game.</p>
+            <p style="margin:0;">Cards are numbered 1-21. Each round you guess if the next card is higher, lower, or exactly the same card. Safer vs risky guesses change the points. Correct "same" is rare but gives a big bonus; wrong guesses penalize you. Consecutive correct answers build a combo multiplier and can grant a one-time shield. No gambling or real prizes here—just a free brain-training game.</p>
           </div>
         </div>
       </div>
@@ -759,13 +818,14 @@
       btnExitRoom: "Odadan Çık",
       btnHigher: "Daha Yüksek",
       btnLower: "Daha Alçak",
-      btnSame: "Aynı (0 gelir)",
+      btnSame: "Aynı kart gelir",
+      helpButtonLabel: "Yardım / Nasıl Oynanır",
       errorNameRequired: "İsmini yazmalısın.",
       errorCodeRequired: "Oda kodu boş olamaz.",
       errorRoomNotFound: "Böyle bir oda bulunamadı.",
       timerLabel: "Kalan süre",
       guessInfo:
-        "Puan: Tahmin yok -1. Güvenli doğru +1 / riskli doğru +3. Yanlış: güvenli 0, riskli -1. '0 gelir' doğru +5, yanlış -2. Combo çarpanı streak'e göre artar, kalkan bir kez cezayı siler.",
+        "Puan: Tahmin yok -1. Güvenli doğru +1 / riskli doğru +3. Yanlış: güvenli 0, riskli -1. 'Aynı kart gelir' doğru +5, yanlış -2. Combo çarpanı streak'e göre artar, kalkan bir kez cezayı siler.",
       youLabel: "Sen",
       hostTag: "Kurucu",
       winnerPrefix: "Kazanan:",
@@ -814,7 +874,8 @@
       btnExitRoom: "Exit Room",
       btnHigher: "Higher",
       btnLower: "Lower",
-      btnSame: "Same (0)",
+      btnSame: "Same card",
+      helpButtonLabel: "Help / How to Play",
       errorNameRequired: "Please enter your name.",
       errorCodeRequired: "Room code cannot be empty.",
       errorRoomNotFound: "Room not found.",
@@ -865,6 +926,8 @@
     document.getElementById("btn-higher-text").textContent = t.btnHigher;
     document.getElementById("btn-lower-text").textContent = t.btnLower;
     document.getElementById("btn-same-text").textContent = t.btnSame;
+    const helpToggleText = document.getElementById("help-toggle-text");
+    if (helpToggleText) helpToggleText.textContent = t.helpButtonLabel;
     document.getElementById("timer-label").textContent = t.timerLabel;
     document.getElementById("guess-info").textContent = t.guessInfo;
     intermissionLabelEl.textContent = t.intermissionLabel;
@@ -911,6 +974,32 @@
     gain.connect(ctx.destination);
     osc.start();
     osc.stop(ctx.currentTime + 0.4);
+  }
+
+  function playScoreDeltaSound(delta) {
+    const ctx = getAudioCtx();
+    if (!ctx || delta === 0) return;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    if (delta > 0) {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(660, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    } else {
+      osc.type = "square";
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(160, ctx.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.16, ctx.currentTime);
+    }
+
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.25);
   }
 
   // --- Helpers ---
@@ -976,6 +1065,34 @@
     try { localStorage.removeItem(LS_KEY); } catch (_) {}
   }
 
+  function resetLocalScoreSoundState() {
+    lastKnownScore = null;
+    lastKnownRoundNumber = null;
+  }
+
+  function updateLocalScoreSoundState() {
+    if (!currentPlayer || !currentGame) return;
+    const me = players.find(p => p.id === currentPlayer.id);
+    if (!me) return;
+
+    const thisScore = me.score || 0;
+    const thisRound = currentGame.round_number || 0;
+
+    if (lastKnownRoundNumber !== null && thisRound === lastKnownRoundNumber && lastKnownScore !== null) {
+      return;
+    }
+
+    if (lastKnownRoundNumber !== null && thisRound > lastKnownRoundNumber && lastKnownScore !== null) {
+      const delta = thisScore - lastKnownScore;
+      if (delta !== 0) {
+        playScoreDeltaSound(delta);
+      }
+    }
+
+    lastKnownScore = thisScore;
+    lastKnownRoundNumber = thisRound;
+  }
+
   // --- State ---
   let currentGame = null;
   let currentPlayer = null;
@@ -986,6 +1103,9 @@
   let timerInterval = null;
   let lastSecondShown = null;
   let resolvingRound = false;
+  let lastKnownScore = null;
+  let lastKnownRoundNumber = null;
+  let lastCardValue = null;
 
   // DOM refs
   const setupSection = document.getElementById("setup-section");
@@ -1007,6 +1127,9 @@
   const guessBtnHigher = document.getElementById("btn-guess-higher");
   const guessBtnLower = document.getElementById("btn-guess-lower");
   const guessBtnSame = document.getElementById("btn-guess-same");
+  const helpPanel = document.getElementById("how-to-play");
+  const helpToggleBtn = document.getElementById("help-toggle-btn");
+  const helpToggleText = document.getElementById("help-toggle-text");
 
   let uiUpdatePending = false;
   function scheduleUIUpdate() {
@@ -1015,6 +1138,14 @@
     requestAnimationFrame(() => {
       uiUpdatePending = false;
       updateRoomUI();
+      updateLocalScoreSoundState();
+    });
+  }
+
+  if (helpToggleBtn && helpPanel) {
+    helpToggleBtn.addEventListener("click", () => {
+      const isVisible = helpPanel.classList.toggle("visible");
+      helpToggleBtn.classList.toggle("active", isVisible);
     });
   }
 
@@ -1047,9 +1178,17 @@
       const v = currentGame.current_card;
       cardValueEl.textContent = v.toString();
       cardDisplayEl.style.background = cardColor(v);
+      if (lastCardValue !== v) {
+        cardDisplayEl.classList.remove("card-flash");
+        void cardDisplayEl.offsetWidth;
+        cardDisplayEl.classList.add("card-flash");
+        setTimeout(() => cardDisplayEl.classList.remove("card-flash"), 400);
+      }
+      lastCardValue = v;
     } else {
       cardValueEl.textContent = "?";
       cardDisplayEl.style.background = "linear-gradient(145deg, #1f2937, #020617)";
+      lastCardValue = null;
     }
 
     // players list
@@ -1415,6 +1554,7 @@
     isCreator = true;
     currentGame = game;
     currentPlayer = player;
+    resetLocalScoreSoundState();
 
     setupSection.style.display = "none";
     gameSection.style.display = "block";
@@ -1468,6 +1608,7 @@
     isCreator = !!player.is_creator;
     currentGame = game;
     currentPlayer = player;
+    resetLocalScoreSoundState();
 
     setupSection.style.display = "none";
     gameSection.style.display = "block";
@@ -1516,6 +1657,7 @@
     await supabase.from("hl_players").update({ last_guess: null }).eq("game_id", currentGame.id);
 
     currentGame = data;
+    resetLocalScoreSoundState();
     log(t.logStart(firstCard, currentGame.time_limit_seconds));
     scheduleUIUpdate();
   }
@@ -1559,7 +1701,12 @@
       .select()
       .single();
 
-    if (!error && data) {
+    if (error) {
+      console.error("Failed to save guess:", error);
+      return;
+    }
+
+    if (data) {
       currentPlayer = data;
       players = players.map(p => (p.id === data.id ? data : p));
       scheduleUIUpdate();
@@ -1570,6 +1717,7 @@
     clearLocalState();
     if (pollInterval) clearInterval(pollInterval);
     if (timerInterval) clearInterval(timerInterval);
+    resetLocalScoreSoundState();
     window.location.href = window.location.pathname;
   }
 
@@ -1810,6 +1958,7 @@
     }
 
     currentGame = data;
+    resetLocalScoreSoundState();
     log(t.logStart(firstCard, currentGame.time_limit_seconds));
     await fetchPlayers(currentGame.id);
     scheduleUIUpdate();
@@ -1845,6 +1994,7 @@
     currentGame = game;
     currentPlayer = player;
     isCreator = !!player.is_creator;
+    resetLocalScoreSoundState();
 
     setupSection.style.display = "none";
     gameSection.style.display = "block";
