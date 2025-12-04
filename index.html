@@ -672,6 +672,7 @@
       btnPlayAgain: "Skorları Sıfırla ve Devam",
       btnEndGame: "Oyunu Bitir",
       btnNewRoom: "Yeni Oda",
+      btnExitRoom: "Odadan Çık",
       btnHigher: "Daha Yüksek",
       btnLower: "Daha Alçak",
       errorNameRequired: "İsmini yazmalısın.",
@@ -724,6 +725,7 @@
       btnPlayAgain: "Reset Scores & Continue",
       btnEndGame: "End Game",
       btnNewRoom: "New Room",
+      btnExitRoom: "Exit Room",
       btnHigher: "Higher",
       btnLower: "Lower",
       errorNameRequired: "Please enter your name.",
@@ -877,6 +879,7 @@
   let currentGame = null;
   let currentPlayer = null;
   let players = [];
+  let lastRevealedScores = [];
   let isCreator = false;
   let pollInterval = null;
   let timerInterval = null;
@@ -994,9 +997,14 @@
       playersList.appendChild(row);
     });
 
-    // scoreboard
+    // scoreboard (freeze during intermission so points reveal with card)
+    if (!inIntermission || lastRevealedScores.length === 0) {
+      lastRevealedScores = players.map(p => ({ ...p }));
+    }
+
     scoreboardBodyEl.innerHTML = "";
-    const sorted = [...players].sort((a,b) => (b.score || 0) - (a.score || 0));
+    const scoreSource = inIntermission ? lastRevealedScores : players;
+    const sorted = [...scoreSource].sort((a,b) => (b.score || 0) - (a.score || 0));
     sorted.forEach(p => {
       const row = document.createElement("div");
       row.className = "score-row";
@@ -1041,6 +1049,12 @@
       };
       statusActions.appendChild(newRoom);
     }
+
+    const exitBtn = document.createElement("button");
+    exitBtn.className = "secondary";
+    exitBtn.textContent = t.btnExitRoom;
+    exitBtn.onclick = exitRoom;
+    statusActions.appendChild(exitBtn);
 
     // guess buttons enable/disable
     const canGuess =
@@ -1399,6 +1413,13 @@
       players = players.map(p => (p.id === data.id ? data : p));
       scheduleUIUpdate();
     }
+  }
+
+  function exitRoom() {
+    clearLocalState();
+    if (pollInterval) clearInterval(pollInterval);
+    if (timerInterval) clearInterval(timerInterval);
+    window.location.href = window.location.pathname;
   }
 
   async function checkRoundTimeout() {
