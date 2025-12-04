@@ -290,6 +290,33 @@
       overflow: hidden;
     }
 
+    .intermission-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 40%, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.95));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--text);
+      text-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+      transition: opacity 0.2s ease;
+    }
+
+    .intermission-overlay.hidden { opacity: 0; pointer-events: none; }
+
+    .intermission-count {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+    }
+
+    .intermission-label {
+      font-size: 0.85rem;
+      color: var(--text-soft);
+    }
+
     .card-display-inner {
       position: absolute;
       inset: 0;
@@ -556,6 +583,10 @@
           <div>
             <div class="card-display" id="card-display">
               <div class="card-display-inner"></div>
+              <div class="intermission-overlay hidden" id="intermission-overlay">
+                <div class="intermission-count" id="intermission-count">3</div>
+                <div class="intermission-label" id="intermission-label">Yeni kart geliyor</div>
+              </div>
               <div class="card-range">
                 <span>1</span>
                 <span>21</span>
@@ -606,6 +637,9 @@
 
   const LS_KEY = "hl21_state_v1";
   const LS_LANG = "hl21_lang";
+  const GRACE_MS = 1000;
+  const INTERMISSION_MS = 3000;
+  const VERY_LOW_SCORE = -20;
 
   // --- i18n ---
   let currentLang = localStorage.getItem(LS_LANG) || "tr";
@@ -636,6 +670,7 @@
       labelScoreboard: "Skor Tablosu",
       btnStartGame: "Oyunu Başlat",
       btnPlayAgain: "Skorları Sıfırla ve Devam",
+      btnEndGame: "Oyunu Bitir",
       btnNewRoom: "Yeni Oda",
       btnHigher: "Daha Yüksek",
       btnLower: "Daha Alçak",
@@ -647,6 +682,7 @@
       youLabel: "Sen",
       hostTag: "Kurucu",
       winnerPrefix: "Kazanan:",
+      intermissionLabel: "Yeni kart 3-2-1",
       logGameCreated: slug => `Oyun oluşturuldu. Kod: ${slug}`,
       logJoined: slug => `Odaya katıldın. Kod: ${slug}`,
       logStart: (card, limit) => `Oyun başladı. İlk kart: ${card}. Tur süresi: ${limit} sn.`,
@@ -658,6 +694,8 @@
         return `${name}: 0 puan`;
       },
       logNoGuess: name => `${name} tahmin yapmadı, -1 puan.`,
+      logEndedByHost: "Oyun kurucu tarafından bitirildi.",
+      logAutoLow: "Tüm oyuncular -20'nin altında. Oyun otomatik sona erdi.",
     },
     en: {
       title: "HighLow 21",
@@ -684,6 +722,7 @@
       labelScoreboard: "Scoreboard",
       btnStartGame: "Start Game",
       btnPlayAgain: "Reset Scores & Continue",
+      btnEndGame: "End Game",
       btnNewRoom: "New Room",
       btnHigher: "Higher",
       btnLower: "Lower",
@@ -695,6 +734,7 @@
       youLabel: "You",
       hostTag: "Host",
       winnerPrefix: "Winner:",
+      intermissionLabel: "New card in 3-2-1",
       logGameCreated: slug => `Game created. Code: ${slug}`,
       logJoined: slug => `Joined room. Code: ${slug}`,
       logStart: (card, limit) => `Game started. First card: ${card}. Round time: ${limit}s.`,
@@ -706,6 +746,8 @@
         return `${name}: 0 points`;
       },
       logNoGuess: name => `${name} made no guess, -1 point.`,
+      logEndedByHost: "Game ended by host.",
+      logAutoLow: "All players reached very low scores. Game finished.",
     }
   };
 
@@ -734,6 +776,7 @@
     document.getElementById("btn-lower-text").textContent = t.btnLower;
     document.getElementById("timer-label").textContent = t.timerLabel;
     document.getElementById("guess-info").textContent = t.guessInfo;
+    intermissionLabelEl.textContent = t.intermissionLabel;
     updateRoomUI();
   }
 
@@ -807,6 +850,15 @@
     )},85%,45%))`;
   }
 
+  function getRoundTiming() {
+    if (!currentGame || !currentGame.deadline_at || !currentGame.time_limit_seconds) {
+      return null;
+    }
+    const deadlineMs = new Date(currentGame.deadline_at).getTime();
+    const guessStartMs = deadlineMs - currentGame.time_limit_seconds * 1000;
+    return { deadlineMs, guessStartMs };
+  }
+
   function saveLocalState() {
     if (!currentGame || !currentPlayer) return;
     try {
@@ -829,6 +881,7 @@
   let pollInterval = null;
   let timerInterval = null;
   let lastSecondShown = null;
+  let resolvingRound = false;
 
   // DOM refs
   const setupSection = document.getElementById("setup-section");
@@ -842,6 +895,9 @@
   const statusActions = document.getElementById("status-actions");
   const cardDisplayEl = document.getElementById("card-display");
   const cardValueEl = document.getElementById("card-value");
+  const intermissionOverlay = document.getElementById("intermission-overlay");
+  const intermissionCountEl = document.getElementById("intermission-count");
+  const intermissionLabelEl = document.getElementById("intermission-label");
   const timerValueEl = document.getElementById("timer-value");
   const scoreboardBodyEl = document.getElementById("scoreboard-body");
   const guessBtnHigher = document.getElementById("btn-guess-higher");
@@ -861,6 +917,11 @@
     const t = textMap[currentLang];
     if (!currentGame) return;
 
+    const timings = getRoundTiming();
+    const now = Date.now();
+    const inIntermission =
+      currentGame.status === "running" && timings && now < timings.guessStartMs;
+
     roomCodeEl.textContent = currentGame.slug;
     const link = `${window.location.origin}${window.location.pathname}?game=${currentGame.slug}`;
     roomLinkEl.href = link;
@@ -870,13 +931,14 @@
     // status text
     let label = "";
     if (currentGame.status === "waiting") label = t.statusWaiting;
-    else if (currentGame.status === "running") label = t.statusRunning;
+    else if (currentGame.status === "running") label = inIntermission ? t.intermissionLabel : t.statusRunning;
     else label = t.statusFinished;
     roomStatusText.textContent = label;
     statusText.textContent = label;
 
     // current card visuals
-    if (currentGame.current_card) {
+    const showHiddenCard = inIntermission || !currentGame.current_card;
+    if (!showHiddenCard && currentGame.current_card) {
       const v = currentGame.current_card;
       cardValueEl.textContent = v.toString();
       cardDisplayEl.style.background = cardColor(v);
@@ -957,6 +1019,13 @@
       startBtn.onclick = startGame;
       statusActions.appendChild(startBtn);
     }
+    if (isCreator && currentGame.status === "running") {
+      const endBtn = document.createElement("button");
+      endBtn.className = "secondary";
+      endBtn.textContent = t.btnEndGame;
+      endBtn.onclick = endGame;
+      statusActions.appendChild(endBtn);
+    }
     if (isCreator && currentGame.status === "finished") {
       const again = document.createElement("button");
       again.textContent = t.btnPlayAgain;
@@ -977,7 +1046,10 @@
     const canGuess =
       currentGame.status === "running" &&
       currentGame.deadline_at &&
-      currentPlayer;
+      currentPlayer &&
+      timings &&
+      !inIntermission &&
+      now < timings.deadlineMs;
 
     const me = players.find(p => p.id === (currentPlayer && currentPlayer.id));
     const alreadyGuessed = !!(me && me.last_guess);
@@ -1095,13 +1167,31 @@
     if (!currentGame || !currentGame.deadline_at || currentGame.status !== "running") {
       timerValueEl.textContent = "--";
       timerValueEl.classList.remove("timer-critical");
+      intermissionOverlay.classList.add("hidden");
       lastSecondShown = null;
       return;
     }
 
+    const timings = getRoundTiming();
+    if (!timings) return;
     const now = Date.now();
-    const deadline = new Date(currentGame.deadline_at).getTime();
-    let remaining = Math.max(0, Math.ceil((deadline - now) / 1000));
+    const inIntermission = now < timings.guessStartMs;
+
+    if (inIntermission) {
+      const countdown = Math.max(0, Math.ceil((timings.guessStartMs - now) / 1000));
+      timerValueEl.textContent = countdown.toString();
+      timerValueEl.classList.toggle("timer-critical", countdown <= 3);
+      intermissionOverlay.classList.remove("hidden");
+      intermissionCountEl.textContent = countdown.toString();
+      if (countdown !== lastSecondShown && countdown > 0) {
+        lastSecondShown = countdown;
+        playTickSound(countdown);
+      }
+      return;
+    }
+
+    intermissionOverlay.classList.add("hidden");
+    const remaining = Math.max(0, Math.ceil((timings.deadlineMs - now) / 1000));
     timerValueEl.textContent = remaining.toString();
     timerValueEl.classList.toggle("timer-critical", remaining <= 3);
 
@@ -1236,7 +1326,8 @@
 
     const firstCard = randCard();
     const now = new Date();
-    const deadline = new Date(now.getTime() + currentGame.time_limit_seconds * 1000);
+    const guessStart = new Date(now.getTime() + INTERMISSION_MS);
+    const deadline = new Date(guessStart.getTime() + currentGame.time_limit_seconds * 1000);
 
     const { data, error } = await supabase
       .from("hl_games")
@@ -1264,15 +1355,34 @@
     scheduleUIUpdate();
   }
 
+  async function endGame() {
+    if (!currentGame || !isCreator) return;
+    const t = textMap[currentLang];
+    const now = new Date();
+    const { data, error } = await supabase
+      .from("hl_games")
+      .update({ status: "finished", ended_at: now.toISOString(), deadline_at: null })
+      .eq("id", currentGame.id)
+      .select()
+      .single();
+
+    if (!error && data) {
+      currentGame = data;
+      log(t.logEndedByHost);
+      scheduleUIUpdate();
+    }
+  }
+
   async function sendGuess(direction) {
     if (!currentGame || !currentPlayer) return;
     if (currentGame.status !== "running" || !currentGame.deadline_at) return;
 
     getAudioCtx(); // user interaction
 
+    const timings = getRoundTiming();
     const now = Date.now();
-    const deadline = new Date(currentGame.deadline_at).getTime();
-    if (now > deadline) return;
+    if (!timings) return;
+    if (now < timings.guessStartMs || now > timings.deadlineMs) return;
 
     const me = players.find(p => p.id === currentPlayer.id);
     if (me && me.last_guess) return; // bir kere tahmin
@@ -1286,150 +1396,181 @@
 
     if (!error && data) {
       currentPlayer = data;
+      players = players.map(p => (p.id === data.id ? data : p));
       scheduleUIUpdate();
     }
   }
 
   async function checkRoundTimeout() {
+    if (!isCreator) return;
     if (!currentGame || currentGame.status !== "running") return;
     if (!currentGame.deadline_at) return;
 
+    const timings = getRoundTiming();
+    if (!timings) return;
     const now = Date.now();
-    const deadline = new Date(currentGame.deadline_at).getTime();
-    if (now <= deadline) return;
+    if (now <= timings.deadlineMs + GRACE_MS) return;
 
-    // tek sefer çalışması için deadline'ı sıfırlayalım (çoklu çağrıları engellemek için)
-    const { data: freshGame, error: gErr } = await supabase
-      .from("hl_games")
-      .select("*")
-      .eq("id", currentGame.id)
-      .single();
-
-    if (gErr || !freshGame) return;
-    if (!freshGame.deadline_at || new Date(freshGame.deadline_at).getTime() > now) {
-      // başka bir client çoktan yeni turu başlatmış
-      currentGame = freshGame;
-      return;
-    }
-    if (freshGame.status !== "running") {
-      currentGame = freshGame;
-      return;
-    }
-
-    currentGame = freshGame;
     await resolveRound();
   }
 
   async function resolveRound() {
+    if (!isCreator || resolvingRound) return;
     if (!currentGame || !currentGame.current_card) return;
+    const baseTimings = getRoundTiming();
+    if (!baseTimings) return;
+    if (Date.now() <= baseTimings.deadlineMs + GRACE_MS) return;
+
+    resolvingRound = true;
     const t = textMap[currentLang];
 
-    const current = currentGame.current_card;
-    let next = randCard();
-    while (next === current) {
-      // eşit kartı çok nadir yapmak için tekrar çek
-      next = randCard();
-    }
-
-    // son oyuncu listesi
-    const { data: curPlayers, error } = await supabase
-      .from("hl_players")
-      .select("*")
-      .eq("game_id", currentGame.id);
-
-    if (error || !curPlayers) return;
-
-    const isHigher = next > current;
-
-    // puanlama: tahmin yok -1, doğru +2, yanlış 0
-    for (const p of curPlayers) {
-      let delta = 0;
-      if (!p.last_guess) {
-        delta = -1;
-      } else if ((p.last_guess === "higher" && isHigher) ||
-                 (p.last_guess === "lower" && !isHigher)) {
-        delta = +2;
-      } else {
-        delta = 0;
+    try {
+      const freshGame = await fetchGameById(currentGame.id);
+      if (!freshGame || freshGame.status !== "running" || !freshGame.deadline_at) {
+        if (freshGame) currentGame = freshGame;
+        return;
       }
 
-      if (delta !== 0) {
-        await supabase
-          .from("hl_players")
-          .update({ score: (p.score || 0) + delta })
-          .eq("id", p.id);
+      const timings = (() => {
+        const d = new Date(freshGame.deadline_at).getTime();
+        return {
+          deadlineMs: d,
+          guessStartMs: d - freshGame.time_limit_seconds * 1000
+        };
+      })();
+
+      if (Date.now() <= timings.deadlineMs + GRACE_MS) {
+        currentGame = freshGame;
+        return;
       }
 
-      if (!p.last_guess) {
-        log(t.logNoGuess(p.name));
-      } else {
-        log(t.logScoreDelta(p.name, delta));
-      }
-    }
+      const roundNumber = freshGame.round_number || 1;
 
-    // tahminleri temizle
-    await supabase
-      .from("hl_players")
-      .update({ last_guess: null })
-      .eq("game_id", currentGame.id);
-
-    playRevealSound();
-    log(t.logRoundResult(current, next));
-
-    // güncel skorları çek
-    const { data: updatedPlayers } = await supabase
-      .from("hl_players")
-      .select("*")
-      .eq("game_id", currentGame.id);
-
-    players = updatedPlayers || players;
-
-    // kazanan var mı?
-    const target = currentGame.target_score || 10;
-    const winner = (updatedPlayers || []).find(p => (p.score || 0) >= target);
-
-    if (winner) {
-      const { data, error: gErr } = await supabase
+      // try to lock this round (idempotent)
+      const { data: lockedGame, error: lockErr } = await supabase
         .from("hl_games")
-        .update({
-          status: "finished",
-          ended_at: new Date().toISOString(),
-          current_card: next,
-          deadline_at: null
-        })
-        .eq("id", currentGame.id)
+        .update({ deadline_at: null })
+        .eq("id", freshGame.id)
+        .eq("round_number", roundNumber)
+        .eq("status", "running")
+        .eq("deadline_at", freshGame.deadline_at)
         .select()
         .single();
 
-      if (!gErr && data) {
-        currentGame = data;
+      if (lockErr || !lockedGame) {
+        currentGame = freshGame;
+        return;
       }
-      log(t.logWin(winner.name));
+
+      currentGame = lockedGame;
+
+      const { data: curPlayers, error } = await supabase
+        .from("hl_players")
+        .select("*")
+        .eq("game_id", currentGame.id);
+
+      if (error || !curPlayers) return;
+
+      const current = freshGame.current_card;
+      let next = randCard();
+      while (next === current) next = randCard();
+
+      const isHigher = next > current;
+
+      const updates = curPlayers.map(async p => {
+        let delta = 0;
+        if (!p.last_guess) delta = -1;
+        else if (
+          (p.last_guess === "higher" && isHigher) ||
+          (p.last_guess === "lower" && !isHigher)
+        ) {
+          delta = +2;
+        }
+
+        if (delta !== 0) {
+          await supabase
+            .from("hl_players")
+            .update({ score: (p.score || 0) + delta })
+            .eq("id", p.id);
+        }
+
+        if (!p.last_guess) log(t.logNoGuess(p.name));
+        else log(t.logScoreDelta(p.name, delta));
+      });
+
+      await Promise.all(updates);
+
+      await supabase
+        .from("hl_players")
+        .update({ last_guess: null })
+        .eq("game_id", currentGame.id);
+
+      playRevealSound();
+      log(t.logRoundResult(current, next));
+
+      const { data: updatedPlayers } = await supabase
+        .from("hl_players")
+        .select("*")
+        .eq("game_id", currentGame.id);
+
+      players = updatedPlayers || curPlayers;
+
+      const target = freshGame.target_score || 10;
+      const winner = (updatedPlayers || []).find(p => (p.score || 0) >= target);
+      const everyoneLow = (updatedPlayers || []).every(
+        p => (p.score || 0) <= VERY_LOW_SCORE
+      );
+
+      if (winner || everyoneLow) {
+        const { data, error: gErr } = await supabase
+          .from("hl_games")
+          .update({
+            status: "finished",
+            ended_at: new Date().toISOString(),
+            current_card: next,
+            deadline_at: null
+          })
+          .eq("id", currentGame.id)
+          .eq("round_number", roundNumber)
+          .select()
+          .single();
+
+        if (!gErr && data) {
+          currentGame = data;
+        }
+        if (winner) log(t.logWin(winner.name));
+        if (!winner && everyoneLow) log(t.logAutoLow);
+        return;
+      }
+
+      // oyun devam: yeni tur (intermission + süre)
+      const now = new Date();
+      const guessStart = new Date(now.getTime() + INTERMISSION_MS);
+      const deadline = new Date(
+        guessStart.getTime() + freshGame.time_limit_seconds * 1000
+      );
+
+      const { data: newGame, error: updErr } = await supabase
+        .from("hl_games")
+        .update({
+          current_card: next,
+          round_number: roundNumber + 1,
+          deadline_at: deadline.toISOString()
+        })
+        .eq("id", currentGame.id)
+        .eq("round_number", roundNumber)
+        .select()
+        .single();
+
+      if (!updErr && newGame) {
+        currentGame = newGame;
+      }
+
+      await fetchPlayers(currentGame.id);
+    } finally {
+      resolvingRound = false;
       scheduleUIUpdate();
-      return;
     }
-
-    // oyun devam: yeni tur
-    const now = new Date();
-    const deadline = new Date(now.getTime() + currentGame.time_limit_seconds * 1000);
-
-    const { data: newGame, error: updErr } = await supabase
-      .from("hl_games")
-      .update({
-        current_card: next,
-        round_number: (currentGame.round_number || 1) + 1,
-        deadline_at: deadline.toISOString()
-      })
-      .eq("id", currentGame.id)
-      .select()
-      .single();
-
-    if (!updErr && newGame) {
-      currentGame = newGame;
-    }
-
-    await fetchPlayers(currentGame.id);
-    scheduleUIUpdate();
   }
 
   async function resetScoresAndContinue() {
@@ -1443,7 +1584,8 @@
 
     const firstCard = randCard();
     const now = new Date();
-    const deadline = new Date(now.getTime() + currentGame.time_limit_seconds * 1000);
+    const guessStart = new Date(now.getTime() + INTERMISSION_MS);
+    const deadline = new Date(guessStart.getTime() + currentGame.time_limit_seconds * 1000);
 
     const { data, error } = await supabase
       .from("hl_games")
