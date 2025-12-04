@@ -577,7 +577,7 @@
 
     .score-row {
       display: grid;
-      grid-template-columns: auto 1fr auto;
+      grid-template-columns: auto auto 1fr auto;
       align-items: center;
       gap: 8px;
       padding: 3px 0;
@@ -592,6 +592,17 @@
     }
 
     .score-row:last-child { border-bottom: none; }
+
+    .score-rank {
+      width: 32px;
+      font-weight: 700;
+      color: var(--text-soft);
+      text-align: right;
+    }
+
+    .score-row.winner .score-rank {
+      color: #fbbf24;
+    }
 
     .score-points {
       font-weight: 700;
@@ -616,6 +627,24 @@
       color: #4ade80;
       border-color: rgba(74, 222, 128, 0.4);
       box-shadow: 0 0 10px rgba(74, 222, 128, 0.35);
+    }
+
+    .winner-banner {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      background: linear-gradient(120deg, rgba(56, 189, 248, 0.16), rgba(16, 185, 129, 0.12));
+      box-shadow: 0 14px 36px rgba(2, 6, 23, 0.6);
+      font-weight: 700;
+      color: #f8fafc;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .winner-banner.visible {
+      display: inline-flex;
     }
 
     .score-outcome.lose {
@@ -677,6 +706,8 @@
       background: rgba(15, 23, 42, 0.85);
       border: 1px solid rgba(56, 189, 248, 0.15);
       box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+      z-index: 5;
+      pointer-events: auto;
     }
 
     .lang-btn {
@@ -920,6 +951,8 @@
           </div>
         </div>
       </div>
+
+      <div class="winner-banner" id="winner-banner" aria-live="polite"></div>
 
       <div class="players-block">
         <div class="section-title" id="players-section-title">Oyuncular</div>
@@ -1519,6 +1552,7 @@
   const helpModal = document.getElementById("help-modal");
   const helpCloseBtn = document.getElementById("help-close-btn");
   const helpModalTitleEl = document.getElementById("help-modal-title");
+  const winnerBannerEl = document.getElementById("winner-banner");
 
   let uiUpdatePending = false;
   function scheduleUIUpdate() {
@@ -1546,7 +1580,10 @@
   }
 
   if (helpToggleBtn && helpModal) {
-    helpToggleBtn.addEventListener("click", openHelpModal);
+    helpToggleBtn.addEventListener("click", () => {
+      playClickSound();
+      openHelpModal();
+    });
   }
 
   if (helpCloseBtn) {
@@ -1701,13 +1738,28 @@
       lastRevealedScores = players.map(p => ({ ...p }));
     }
 
+    const liveWinner =
+      currentGame.status === "finished" && players.length
+        ? [...players].sort((a, b) => (b.score || 0) - (a.score || 0))[0]
+        : null;
+
     scoreboardBodyEl.innerHTML = "";
     const scoreSource = inIntermission ? lastRevealedScores : players;
     const sorted = [...scoreSource].sort((a,b) => (b.score || 0) - (a.score || 0));
-    sorted.forEach(p => {
+    sorted.forEach((p, idx) => {
       const row = document.createElement("div");
       row.className = "score-row";
       if (currentPlayer && p.id === currentPlayer.id) row.classList.add("you");
+      if (liveWinner && p.id === liveWinner.id && currentGame.status === "finished") {
+        row.classList.add("winner");
+      }
+
+      const rank = document.createElement("div");
+      rank.className = "score-rank";
+      rank.textContent = `${idx + 1}.`;
+      if (liveWinner && p.id === liveWinner.id && currentGame.status === "finished") {
+        rank.textContent = `🏆 ${idx + 1}.`;
+      }
       const name = document.createElement("div");
       name.textContent = p.name;
       if (currentPlayer && p.id === currentPlayer.id) {
@@ -1730,6 +1782,12 @@
         tag.textContent = "🛡";
         name.appendChild(tag);
       }
+      if (liveWinner && p.id === liveWinner.id && currentGame.status === "finished") {
+        const tag = document.createElement("span");
+        tag.className = "tagline";
+        tag.textContent = t.winnerPrefix;
+        name.appendChild(tag);
+      }
       const pts = document.createElement("div");
       pts.className = "score-points";
       const s = p.score || 0;
@@ -1750,11 +1808,22 @@
       } else {
         outcome.textContent = "•";
       }
+      row.appendChild(rank);
       row.appendChild(outcome);
       row.appendChild(name);
       row.appendChild(pts);
       scoreboardBodyEl.appendChild(row);
     });
+
+    if (winnerBannerEl) {
+      if (liveWinner) {
+        winnerBannerEl.textContent = `${t.winnerPrefix} ${liveWinner.name} 🎉`;
+        winnerBannerEl.classList.add("visible");
+      } else {
+        winnerBannerEl.textContent = "";
+        winnerBannerEl.classList.remove("visible");
+      }
+    }
 
     // action buttons
     statusActions.innerHTML = "";
