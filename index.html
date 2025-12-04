@@ -371,14 +371,14 @@
     .guess-buttons {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       min-width: 190px;
     }
 
     .guess-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 10px;
     }
 
     .guess-btn {
@@ -394,6 +394,13 @@
       background: linear-gradient(to right, #fb923c, #f97316);
     }
 
+    .guess-btn.same {
+      background: linear-gradient(145deg, rgba(129, 140, 248, 0.18), rgba(56, 189, 248, 0.14));
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      width: 100%;
+      justify-content: center;
+    }
+
     .guess-btn.selected {
       box-shadow: 0 0 18px rgba(56, 189, 248, 0.7);
       transform: translateY(-1px);
@@ -402,6 +409,10 @@
     .guess-info {
       font-size: 0.8rem;
       color: var(--text-soft);
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 10px;
+      padding: 10px 12px;
     }
 
     .log {
@@ -424,6 +435,25 @@
       font-size: 0.8rem;
     }
 
+    .tagline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--text);
+      background: rgba(56, 189, 248, 0.08);
+      margin-left: 8px;
+      white-space: nowrap;
+    }
+
+    .tagline.shield {
+      border-color: rgba(129, 140, 248, 0.6);
+      background: rgba(129, 140, 248, 0.16);
+    }
+
     .score-row {
       display: flex;
       justify-content: space-between;
@@ -439,6 +469,35 @@
       color: var(--danger);
       font-size: 0.8rem;
       margin-top: 6px;
+    }
+
+    .info-panel {
+      margin-top: 16px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(75, 85, 99, 0.6);
+      border-radius: 12px;
+      padding: 14px 16px;
+      color: var(--text-soft);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .info-panel h3 {
+      margin: 0 0 8px 0;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    @media (min-width: 900px) {
+      .info-grid {
+        grid-template-columns: 1fr 1fr;
+      }
     }
 
     .lang-switch {
@@ -603,6 +662,9 @@
               <button class="guess-btn lower" id="btn-guess-lower">
                 🔻 <span id="btn-lower-text">Daha Alçak</span>
               </button>
+              <button class="guess-btn same" id="btn-guess-same">
+                ⭕ <span id="btn-same-text">Aynı (0 gelir)</span>
+              </button>
             </div>
             <div class="guess-row" style="align-items:center;">
               <div class="timer-chip">
@@ -622,6 +684,28 @@
       <div class="scoreboard" id="scoreboard">
         <div class="section-title" id="scoreboard-title">Skor Tablosu</div>
         <div id="scoreboard-body"></div>
+      </div>
+
+      <div class="info-panel" id="how-to-play">
+        <div class="info-grid">
+          <div>
+            <h3>Nasıl Oynanır?</h3>
+            <ul style="margin:0 0 6px 16px; padding:0; color:var(--text-soft);">
+              <li>1-21 numaralı kartlarla oynanır. Önce mevcut kart açılır.</li>
+              <li>Süre içinde bir sonraki kartın daha <strong>yüksek</strong>, <strong>düşük</strong> ya da <strong>aynı</strong> (0 gelir) olacağını tahmin et.</li>
+              <li>Kartın değerine göre yüksek/düşük tahmini güvenli veya riskli sayılır; riskli doğru tahmin yüksek puan getirir, yanlış tahmin ceza yazabilir.</li>
+              <li>"0 gelir" tahmini çok risklidir: tutarsa büyük ödül, tutmazsa ekstra ceza.</li>
+              <li>Tahmin etmeyen oyuncular küçük bir ceza alır.</li>
+              <li>Art arda doğru bildikçe combo çarpanı artar; seri 3 olunca kalkan kazanırsın, ilk hatanda cezayı emer.</li>
+              <li>Oda kurulurken belirlenen hedef puana ilk ulaşan kazanır.</li>
+            </ul>
+            <p style="margin:8px 0 0 0; color:var(--text-soft); font-size:0.85rem;">Bu oyun ücretsiz bir zihin egzersizidir; gerçek para, ödül veya bahis içermez. Kumar oynamak dinen sakıncalı ve yasaktır.</p>
+          </div>
+          <div>
+            <h3>How to Play (Short English)</h3>
+            <p style="margin:0;">Cards are numbered 1-21. Each round you guess if the next card is higher, lower, or exactly the same ("0 comes"). Safer vs risky guesses change the points. Correct "same" is rare but gives a big bonus; wrong guesses penalize you. Consecutive correct answers build a combo multiplier and can grant a one-time shield. No gambling or real prizes here—just a free brain-training game.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -647,7 +731,7 @@
   const textMap = {
     tr: {
       title: "HighLow 21",
-      subtitle: "1–21 arası kartlar. Sıradaki kart daha mı yüksek, daha mı alçak? Zaman dolmadan tahmin et, puanları topla!",
+      subtitle: "1–21 arası kartlar. Sıradaki kart daha mı yüksek, daha mı alçak yoksa aynı mı? Zaman dolmadan tahmin et, puanları topla!",
       createSectionTitle: "Yeni Oyun Oluştur",
       joinSectionTitle: "Koda / Linke Göre Katıl",
       labelCreatorName: "İsmin",
@@ -665,7 +749,7 @@
       playersSectionTitle: "Oyuncular",
       cardSectionTitle: "Kart & Tahmin",
       statusWaiting: "Oyun henüz başlamadı. Oyuncular katılabilir.",
-      statusRunning: "Tahmin zamanı! Sıradaki kart daha yüksek mi, daha alçak mı?",
+      statusRunning: "Tahmin zamanı! Sıradaki kart daha yüksek mi, daha alçak mı yoksa aynı mı?",
       statusFinished: "Oyun bitti.",
       labelScoreboard: "Skor Tablosu",
       btnStartGame: "Oyunu Başlat",
@@ -675,11 +759,13 @@
       btnExitRoom: "Odadan Çık",
       btnHigher: "Daha Yüksek",
       btnLower: "Daha Alçak",
+      btnSame: "Aynı (0 gelir)",
       errorNameRequired: "İsmini yazmalısın.",
       errorCodeRequired: "Oda kodu boş olamaz.",
       errorRoomNotFound: "Böyle bir oda bulunamadı.",
       timerLabel: "Kalan süre",
-      guessInfo: "Her tur: Tahmin etmeyen -1 puan, doğru tahmin +2 puan, yanlış tahmin 0 puan.",
+      guessInfo:
+        "Puan: Tahmin yok -1. Güvenli doğru +1 / riskli doğru +3. Yanlış: güvenli 0, riskli -1. '0 gelir' doğru +5, yanlış -2. Combo çarpanı streak'e göre artar, kalkan bir kez cezayı siler.",
       youLabel: "Sen",
       hostTag: "Kurucu",
       winnerPrefix: "Kazanan:",
@@ -694,13 +780,13 @@
         if (delta < 0) return `${name}: ${delta} puan`;
         return `${name}: 0 puan`;
       },
-      logNoGuess: name => `${name} tahmin yapmadı, -1 puan.`,
+      logNoGuess: name => `${name} tahmin yapmadı.`,
       logEndedByHost: "Oyun kurucu tarafından bitirildi.",
       logAutoLow: "Tüm oyuncular -20'nin altında. Oyun otomatik sona erdi.",
     },
     en: {
       title: "HighLow 21",
-      subtitle: "Cards from 1 to 21. Will the next card be higher or lower? Guess before time runs out and score points!",
+      subtitle: "Cards from 1 to 21. Will the next card be higher, lower, or the same? Guess before time runs out and score points!",
       createSectionTitle: "Create New Game",
       joinSectionTitle: "Join with Code / Link",
       labelCreatorName: "Your name",
@@ -718,7 +804,7 @@
       playersSectionTitle: "Players",
       cardSectionTitle: "Card & Guess",
       statusWaiting: "Game has not started yet. Players can still join.",
-      statusRunning: "Guess time! Will the next card be higher or lower?",
+      statusRunning: "Guess time! Will the next card be higher, lower, or the same?",
       statusFinished: "Game over.",
       labelScoreboard: "Scoreboard",
       btnStartGame: "Start Game",
@@ -728,11 +814,13 @@
       btnExitRoom: "Exit Room",
       btnHigher: "Higher",
       btnLower: "Lower",
+      btnSame: "Same (0)",
       errorNameRequired: "Please enter your name.",
       errorCodeRequired: "Room code cannot be empty.",
       errorRoomNotFound: "Room not found.",
       timerLabel: "Time left",
-      guessInfo: "Each round: no guess -1 point, correct guess +2 points, wrong guess 0 points.",
+      guessInfo:
+        "Points: No guess -1. Safe correct +1 / risky correct +3. Wrong: safe 0, risky -1. 'Same card' correct +5, wrong -2. Combo multiplier grows with streak; shield negates one negative round.",
       youLabel: "You",
       hostTag: "Host",
       winnerPrefix: "Winner:",
@@ -747,7 +835,7 @@
         if (delta < 0) return `${name}: ${delta} points`;
         return `${name}: 0 points`;
       },
-      logNoGuess: name => `${name} made no guess, -1 point.`,
+      logNoGuess: name => `${name} made no guess.`,
       logEndedByHost: "Game ended by host.",
       logAutoLow: "All players reached very low scores. Game finished.",
     }
@@ -776,6 +864,7 @@
     document.getElementById("scoreboard-title").textContent = t.labelScoreboard;
     document.getElementById("btn-higher-text").textContent = t.btnHigher;
     document.getElementById("btn-lower-text").textContent = t.btnLower;
+    document.getElementById("btn-same-text").textContent = t.btnSame;
     document.getElementById("timer-label").textContent = t.timerLabel;
     document.getElementById("guess-info").textContent = t.guessInfo;
     intermissionLabelEl.textContent = t.intermissionLabel;
@@ -842,6 +931,18 @@
     return 1 + Math.floor(Math.random() * 21); // 1..21
   }
 
+  function isSafeGuess(current, guess) {
+    if (guess === "higher") return current >= 1 && current <= 4;
+    if (guess === "lower") return current >= 18 && current <= 21;
+    return false;
+  }
+
+  function getComboMultiplier(streak) {
+    if (streak >= 4) return 2;
+    if (streak >= 2) return 1.5;
+    return 1;
+  }
+
   function cardColor(num) {
     // 1 -> mavi/yeşil, 21 -> kırmızı
     const t = (num - 1) / 20; // 0..1
@@ -905,6 +1006,7 @@
   const scoreboardBodyEl = document.getElementById("scoreboard-body");
   const guessBtnHigher = document.getElementById("btn-guess-higher");
   const guessBtnLower = document.getElementById("btn-guess-lower");
+  const guessBtnSame = document.getElementById("btn-guess-same");
 
   let uiUpdatePending = false;
   function scheduleUIUpdate() {
@@ -975,6 +1077,24 @@
         hostTag.textContent = t.hostTag;
         right.appendChild(hostTag);
       }
+      const streakVal = p.streak || 0;
+      const comboMult = getComboMultiplier(streakVal);
+      if (streakVal > 1) {
+        const comboTag = document.createElement("span");
+        comboTag.className = "player-tag";
+        comboTag.style.borderColor = "rgba(56,189,248,0.5)";
+        comboTag.style.color = "var(--accent)";
+        comboTag.textContent = `COMBO x${comboMult}`;
+        right.appendChild(comboTag);
+      }
+      if (p.has_shield) {
+        const shieldTag = document.createElement("span");
+        shieldTag.className = "player-tag";
+        shieldTag.style.borderColor = "rgba(129,140,248,0.6)";
+        shieldTag.style.color = "#c4d4ff";
+        shieldTag.textContent = "🛡";
+        right.appendChild(shieldTag);
+      }
       if (p.last_guess === "higher") {
         const g = document.createElement("span");
         g.className = "player-tag";
@@ -989,6 +1109,14 @@
         g.style.borderColor = "#fb923c";
         g.style.color = "#fb923c";
         g.textContent = "🔻";
+        right.appendChild(g);
+      }
+      if (p.last_guess === "same") {
+        const g = document.createElement("span");
+        g.className = "player-tag";
+        g.style.borderColor = "rgba(129,140,248,0.7)";
+        g.style.color = "#c7d2fe";
+        g.textContent = "⭕";
         right.appendChild(g);
       }
 
@@ -1010,6 +1138,20 @@
       row.className = "score-row";
       const name = document.createElement("div");
       name.textContent = p.name;
+      const streakVal = p.streak || 0;
+      const comboMult = getComboMultiplier(streakVal);
+      if (streakVal > 1) {
+        const tag = document.createElement("span");
+        tag.className = "tagline";
+        tag.textContent = `COMBO x${comboMult}`;
+        name.appendChild(tag);
+      }
+      if (p.has_shield) {
+        const tag = document.createElement("span");
+        tag.className = "tagline shield";
+        tag.textContent = "🛡";
+        name.appendChild(tag);
+      }
       const pts = document.createElement("div");
       pts.className = "score-points";
       const s = p.score || 0;
@@ -1071,6 +1213,7 @@
     const disabled = !canGuess || alreadyGuessed;
     guessBtnHigher.disabled = disabled;
     guessBtnLower.disabled = disabled;
+    guessBtnSame.disabled = disabled;
 
     guessBtnHigher.classList.toggle(
       "selected",
@@ -1079,6 +1222,10 @@
     guessBtnLower.classList.toggle(
       "selected",
       !!me && me.last_guess === "lower"
+    );
+    guessBtnSame.classList.toggle(
+      "selected",
+      !!me && me.last_guess === "same"
     );
   }
 
@@ -1253,7 +1400,9 @@
       .insert({
         game_id: game.id,
         name,
-        is_creator: true
+        is_creator: true,
+        streak: 0,
+        has_shield: false
       })
       .select()
       .single();
@@ -1304,7 +1453,9 @@
       .insert({
         game_id: game.id,
         name,
-        is_creator: false
+        is_creator: false,
+        streak: 0,
+        has_shield: false
       })
       .select()
       .single();
@@ -1493,38 +1644,69 @@
       if (error || !curPlayers) return;
 
       const current = freshGame.current_card;
-      let next = randCard();
-      while (next === current) next = randCard();
-
-      const isHigher = next > current;
+      const next = randCard();
 
       const updates = curPlayers.map(async p => {
-        let delta = 0;
-        if (!p.last_guess) delta = -1;
-        else if (
-          (p.last_guess === "higher" && isHigher) ||
-          (p.last_guess === "lower" && !isHigher)
-        ) {
-          delta = +2;
+        const guess = p.last_guess;
+        const streakBefore = p.streak || 0;
+        let streakAfter = streakBefore;
+        let hasShield = !!p.has_shield;
+        let baseScore = 0;
+        let correct = false;
+
+        if (!guess) {
+          baseScore = -1; // tahmin yok
+        } else if (guess === "same") {
+          correct = next === current;
+          baseScore = correct ? 5 : -2; // ultra riskli
+        } else {
+          const guessHigher = guess === "higher";
+          const success = (guessHigher && next > current) || (!guessHigher && next < current);
+          const safe = isSafeGuess(current, guess);
+          correct = success;
+          if (success) baseScore = safe ? 1 : 3;
+          else baseScore = safe ? 0 : -1;
         }
 
-        if (delta !== 0) {
-          await supabase
-            .from("hl_players")
-            .update({ score: (p.score || 0) + delta })
-            .eq("id", p.id);
+        if (correct) streakAfter = streakBefore + 1;
+        else streakAfter = 0;
+
+        let shieldUsed = false;
+        if (!correct && baseScore < 0 && hasShield) {
+          baseScore = 0;
+          hasShield = false;
+          shieldUsed = true;
         }
 
-        if (!p.last_guess) log(t.logNoGuess(p.name));
-        else log(t.logScoreDelta(p.name, delta));
+        const comboMultiplier = getComboMultiplier(streakAfter);
+        const finalScore = Math.round(baseScore * comboMultiplier);
+        let newShield = hasShield;
+        if (streakAfter >= 3 && !newShield) newShield = true;
+
+        const updatePayload = {
+          score: (p.score || 0) + finalScore,
+          streak: streakAfter,
+          has_shield: newShield,
+          last_guess: null
+        };
+
+        await supabase.from("hl_players").update(updatePayload).eq("id", p.id);
+
+        if (!guess) {
+          log(t.logNoGuess(p.name));
+          log(t.logScoreDelta(p.name, finalScore));
+        } else {
+          log(t.logScoreDelta(p.name, finalScore));
+        }
+        if (shieldUsed)
+          log(
+            currentLang === "tr"
+              ? `${p.name}: 🛡 kalkan cezayı sildi.`
+              : `${p.name}: 🛡 shield absorbed the penalty.`
+          );
       });
 
       await Promise.all(updates);
-
-      await supabase
-        .from("hl_players")
-        .update({ last_guess: null })
-        .eq("game_id", currentGame.id);
 
       playRevealSound();
       log(t.logRoundResult(current, next));
@@ -1600,7 +1782,7 @@
 
     await supabase
       .from("hl_players")
-      .update({ score: 0, last_guess: null })
+      .update({ score: 0, last_guess: null, streak: 0, has_shield: false })
       .eq("game_id", currentGame.id);
 
     const firstCard = randCard();
@@ -1678,6 +1860,7 @@
   document.getElementById("join-game-btn").onclick = joinGameByCode;
   guessBtnHigher.onclick = () => sendGuess("higher");
   guessBtnLower.onclick = () => sendGuess("lower");
+  guessBtnSame.onclick = () => sendGuess("same");
 
   const langButtons = document.querySelectorAll(".lang-btn");
   langButtons.forEach(btn => {
