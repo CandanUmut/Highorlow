@@ -475,17 +475,58 @@
       border: 1px solid rgba(56, 189, 248, 0.2);
       border-radius: 10px;
       padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
+    .guess-history-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .guess-history-title { font-weight: 700; color: #e5edff; }
+
+    .guess-info-note { color: var(--text-soft); font-size: 0.78rem; }
+
     .guess-feedback {
-      margin-top: 6px;
       font-weight: 600;
     }
 
     .guess-feedback.error { color: var(--danger); }
 
+    .guess-history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      max-height: 160px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .guess-history-item {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.14);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .guess-history-main { font-weight: 700; color: #e5edff; }
+
+    .guess-history-sub { color: var(--text-soft); font-size: 0.75rem; }
+
+    .guess-history-delta.positive { color: #22c55e; }
+    .guess-history-delta.negative { color: var(--danger); }
+    .guess-history-delta.neutral { color: #cbd5e1; }
+
     .current-guess-row {
-      margin-top: 8px;
       display: flex;
       align-items: center;
       gap: 6px;
@@ -535,8 +576,10 @@
     }
 
     .score-row {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 8px;
       padding: 3px 0;
       border-bottom: 1px dashed rgba(31,41,55,0.7);
     }
@@ -553,6 +596,33 @@
     .score-points {
       font-weight: 700;
       color: #e5edff;
+    }
+
+    .score-outcome {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      background: rgba(148, 163, 184, 0.2);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .score-outcome.win {
+      background: rgba(34, 197, 94, 0.18);
+      color: #4ade80;
+      border-color: rgba(74, 222, 128, 0.4);
+      box-shadow: 0 0 10px rgba(74, 222, 128, 0.35);
+    }
+
+    .score-outcome.lose {
+      background: rgba(239, 68, 68, 0.14);
+      color: #f87171;
+      border-color: rgba(248, 113, 113, 0.4);
+      box-shadow: 0 0 10px rgba(248, 113, 113, 0.25);
     }
 
     .error {
@@ -600,18 +670,24 @@
       right: 12px;
       top: 12px;
       display: flex;
-      gap: 6px;
+      gap: 8px;
       align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
     }
 
     .lang-btn {
-      font-size: 0.75rem;
-      padding: 4px 10px;
+      font-size: 0.8rem;
+      padding: 8px 12px;
       border-radius: 999px;
       border: 1px solid rgba(75, 85, 99, 0.8);
       background: rgba(15, 23, 42, 0.9);
       color: var(--text-soft);
       cursor: pointer;
+      min-width: 70px;
     }
 
     .lang-btn.active {
@@ -621,8 +697,8 @@
     }
 
     .help-icon-btn {
-      width: 34px;
-      height: 34px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       border: 1px solid rgba(56, 189, 248, 0.4);
       background: rgba(15, 23, 42, 0.9);
@@ -636,6 +712,56 @@
     }
 
     .help-icon-btn:hover { box-shadow: 0 10px 30px rgba(56, 189, 248, 0.2); }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2, 6, 23, 0.75);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 20;
+    }
+
+    .modal-overlay.visible { display: flex; }
+
+    .modal-content {
+      position: relative;
+      max-width: 920px;
+      width: 100%;
+      background: radial-gradient(circle at top, #0b1120, #020617);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 14px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+      padding: 18px;
+    }
+
+    .modal-close {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+
+    .modal-title {
+      margin: 0 0 12px 0;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
     @keyframes panelGlow {
       0%, 100% { opacity: 0.5; }
@@ -657,6 +783,23 @@
     .card-display.card-flash {
       animation: cardFlash 0.35s ease;
     }
+
+    @keyframes cardWin {
+      0% { transform: scale(1); box-shadow: 0 16px 40px rgba(0,0,0,0.9); }
+      40% { transform: scale(1.05); box-shadow: 0 20px 50px rgba(34, 197, 94, 0.4); }
+      100% { transform: scale(1); box-shadow: 0 16px 40px rgba(0,0,0,0.9); }
+    }
+
+    @keyframes cardLose {
+      0% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      50% { transform: translateX(6px); }
+      75% { transform: translateX(-4px); }
+      100% { transform: translateX(0); }
+    }
+
+    .card-display.win { animation: cardWin 0.6s ease; }
+    .card-display.lose { animation: cardLose 0.5s ease; }
 
     @media (max-width: 768px) {
       .card-shell { padding: 16px; }
@@ -822,7 +965,11 @@
               </div>
             </div>
             <div class="guess-info" id="guess-info">
-              <div id="guess-info-text">Her tur: Tahmin etmeyen -1 puan, doğru tahmin +2 puan, yanlış tahmin 0 puan.</div>
+              <div class="guess-history-header">
+                <span class="guess-history-title" id="guess-history-title">Kart Geçmişi</span>
+                <div id="guess-info-text" class="guess-info-note">Her tur: Tahmin etmeyen -1 puan, doğru tahmin +2 puan, yanlış tahmin 0 puan.</div>
+              </div>
+              <div class="guess-history-list" id="guess-history"></div>
               <div class="guess-feedback" id="guess-feedback"></div>
               <div class="current-guess-row">
                 <span class="current-guess-label" id="current-guess-label">Güncel tahminin:</span>
@@ -840,24 +987,30 @@
         <div id="scoreboard-body"></div>
       </div>
 
-      <div class="info-panel" id="how-to-play">
-        <div class="info-grid">
-          <div>
-            <h3>Nasıl Oynanır?</h3>
-            <ul style="margin:0 0 6px 16px; padding:0; color:var(--text-soft);">
-              <li>1-21 numaralı kartlarla oynanır. Önce mevcut kart açılır.</li>
-              <li>Süre içinde bir sonraki kartın daha <strong>yüksek</strong>, <strong>düşük</strong> ya da <strong>aynı</strong> (aynı kart gelir) olacağını tahmin et.</li>
-              <li>Kartın değerine göre yüksek/düşük tahmini güvenli veya riskli sayılır; riskli doğru tahmin yüksek puan getirir, yanlış tahmin ceza yazabilir.</li>
-              <li>"Aynı kart gelir" tahmini çok risklidir: tutarsa büyük ödül, tutmazsa ekstra ceza.</li>
-              <li>Tahmin etmeyen oyuncular küçük bir ceza alır.</li>
-              <li>Art arda doğru bildikçe combo çarpanı artar; seri 3 olunca kalkan kazanırsın, ilk hatanda cezayı emer.</li>
-              <li>Oda kurulurken belirlenen hedef puana ilk ulaşan kazanır.</li>
-            </ul>
-            <p style="margin:8px 0 0 0; color:var(--text-soft); font-size:0.85rem;">Bu oyun ücretsiz bir zihin egzersizidir; gerçek para, ödül veya bahis içermez. Kumar oynamak dinen sakıncalı ve yasaktır.</p>
-          </div>
-          <div>
-            <h3>How to Play (Short English)</h3>
-            <p style="margin:0;">Cards are numbered 1-21. Each round you guess if the next card is higher, lower, or exactly the same card. Safer vs risky guesses change the points. Correct "same" is rare but gives a big bonus; wrong guesses penalize you. Consecutive correct answers build a combo multiplier and can grant a one-time shield. No gambling or real prizes here—just a free brain-training game.</p>
+      <div class="modal-overlay" id="help-modal" aria-hidden="true" role="dialog">
+        <div class="modal-content">
+          <button class="modal-close" id="help-close-btn" aria-label="Close">✖</button>
+          <h3 class="modal-title" id="help-modal-title">Yardım</h3>
+          <div class="info-panel visible" id="how-to-play">
+            <div class="info-grid">
+              <div>
+                <h3>Nasıl Oynanır?</h3>
+                <ul style="margin:0 0 6px 16px; padding:0; color:var(--text-soft);">
+                  <li>1-21 numaralı kartlarla oynanır. Önce mevcut kart açılır.</li>
+                  <li>Süre içinde bir sonraki kartın daha <strong>yüksek</strong>, <strong>düşük</strong> ya da <strong>aynı</strong> (aynı kart gelir) olacağını tahmin et.</li>
+                  <li>Kartın değerine göre yüksek/düşük tahmini güvenli veya riskli sayılır; riskli doğru tahmin yüksek puan getirir, yanlış tahmin ceza yazabilir.</li>
+                  <li>"Aynı kart gelir" tahmini çok risklidir: tutarsa büyük ödül, tutmazsa ekstra ceza.</li>
+                  <li>Tahmin etmeyen oyuncular küçük bir ceza alır.</li>
+                  <li>Art arda doğru bildikçe combo çarpanı artar; seri 3 olunca kalkan kazanırsın, ilk hatanda cezayı emer.</li>
+                  <li>Oda kurulurken belirlenen hedef puana ilk ulaşan kazanır.</li>
+                </ul>
+                <p style="margin:8px 0 0 0; color:var(--text-soft); font-size:0.85rem;">Bu oyun ücretsiz bir zihin egzersizidir; gerçek para, ödül veya bahis içermez. Kumar oynamak dinen sakıncalı ve yasaktır.</p>
+              </div>
+              <div>
+                <h3>How to Play (Short English)</h3>
+                <p style="margin:0;">Cards are numbered 1-21. Each round you guess if the next card is higher, lower, or exactly the same card. Safer vs risky guesses change the points. Correct "same" is rare but gives a big bonus; wrong guesses penalize you. Consecutive correct answers build a combo multiplier and can grant a one-time shield. No gambling or real prizes here—just a free brain-training game.</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -915,12 +1068,15 @@
       btnLower: "Daha Alçak",
       btnSame: "Aynı kart gelir",
       helpButtonLabel: "Yardım / Nasıl Oynanır",
+      helpModalTitle: "Yardım",
       errorNameRequired: "İsmini yazmalısın.",
       errorCodeRequired: "Oda kodu boş olamaz.",
       errorRoomNotFound: "Böyle bir oda bulunamadı.",
       timerLabel: "Kalan süre",
       guessInfo:
         "Puan: Tahmin yok -1. Güvenli doğru +1 / riskli doğru +3. Yanlış: güvenli 0, riskli -1. 'Aynı kart gelir' doğru +5, yanlış -2. Combo çarpanı streak'e göre artar, kalkan bir kez cezayı siler.",
+      guessHistoryTitle: "Kart Geçmişi",
+      guessHistoryEmpty: "Henüz geçmiş yok. Tahmin yapınca burada göreceksin.",
       currentGuessLabel: "Güncel tahminin:",
       guessValueNone: "Yok",
       guessValueHigher: "Daha yüksek",
@@ -979,12 +1135,15 @@
       btnLower: "Lower",
       btnSame: "Same card",
       helpButtonLabel: "Help / How to Play",
+      helpModalTitle: "Help",
       errorNameRequired: "Please enter your name.",
       errorCodeRequired: "Room code cannot be empty.",
       errorRoomNotFound: "Room not found.",
       timerLabel: "Time left",
       guessInfo:
         "Points: No guess -1. Safe correct +1 / risky correct +3. Wrong: safe 0, risky -1. 'Same card' correct +5, wrong -2. Combo multiplier grows with streak; shield negates one negative round.",
+      guessHistoryTitle: "Card History",
+      guessHistoryEmpty: "No history yet. Make a guess to see results here.",
       currentGuessLabel: "Your current guess:",
       guessValueNone: "None",
       guessValueHigher: "Higher",
@@ -1039,12 +1198,15 @@
     document.getElementById("btn-same-text").textContent = t.btnSame;
     document.getElementById("timer-label").textContent = t.timerLabel;
     if (guessInfoTextEl) guessInfoTextEl.textContent = t.guessInfo;
+    if (guessHistoryTitleEl) guessHistoryTitleEl.textContent = t.guessHistoryTitle;
     if (currentGuessLabelEl) currentGuessLabelEl.textContent = t.currentGuessLabel;
     if (helpToggleBtn) {
       helpToggleBtn.setAttribute("aria-label", t.helpButtonLabel);
       helpToggleBtn.title = t.helpButtonLabel;
     }
+    if (helpModalTitleEl) helpModalTitleEl.textContent = t.helpModalTitle;
     intermissionLabelEl.textContent = t.intermissionLabel;
+    renderHistoryList();
     updateCurrentGuessDisplay();
     updateRoomUI();
   }
@@ -1203,6 +1365,68 @@
     currentGuessValueEl.textContent = translateGuessValue(me && me.last_guess);
   }
 
+  function renderHistoryList() {
+    if (!guessHistoryEl || !guessHistoryTitleEl) return;
+    const t = textMap[currentLang];
+    guessHistoryTitleEl.textContent = t.guessHistoryTitle;
+    guessHistoryEl.innerHTML = "";
+
+    if (!guessHistory.length) {
+      const empty = document.createElement("div");
+      empty.className = "guess-info-note";
+      empty.textContent = t.guessHistoryEmpty;
+      guessHistoryEl.appendChild(empty);
+      return;
+    }
+
+    guessHistory.forEach(entry => {
+      const item = document.createElement("div");
+      item.className = "guess-history-item";
+
+      const main = document.createElement("div");
+      main.className = "guess-history-main";
+      const outcomeIcon = entry.delta > 0 ? "✅" : entry.delta < 0 ? "❌" : "•";
+      const fromVal = entry.from ?? "?";
+      const toVal = entry.to ?? "?";
+      main.textContent = `R${entry.round}: ${fromVal} → ${toVal} ${outcomeIcon}`;
+
+      const sub = document.createElement("div");
+      sub.className = "guess-history-sub";
+      const guessLabel = translateGuessValue(entry.guess);
+      const deltaVal = typeof entry.delta === "number" ? entry.delta : 0;
+      const delta = document.createElement("span");
+      delta.className = "guess-history-delta " + (deltaVal > 0 ? "positive" : deltaVal < 0 ? "negative" : "neutral");
+      delta.textContent = deltaVal > 0 ? `+${deltaVal}` : `${deltaVal}`;
+      sub.textContent = `${guessLabel} • `;
+      sub.appendChild(delta);
+
+      item.appendChild(main);
+      item.appendChild(sub);
+      guessHistoryEl.appendChild(item);
+    });
+  }
+
+  function addHistoryEntry(entry) {
+    guessHistory.unshift(entry);
+    if (guessHistory.length > 12) guessHistory.pop();
+    renderHistoryList();
+    if (cardDisplayEl) {
+      cardDisplayEl.classList.remove("win", "lose");
+      void cardDisplayEl.offsetWidth;
+      if (entry.delta > 0) cardDisplayEl.classList.add("win");
+      else if (entry.delta < 0) cardDisplayEl.classList.add("lose");
+    }
+  }
+
+  function resetHistoryTracking() {
+    lastRoundNumberForHistory = null;
+    lastScoreByPlayer = new Map();
+    lastRoundDeltas = new Map();
+    guessHistory = [];
+    lastGuessByRound = {};
+    renderHistoryList();
+  }
+
   function saveLocalState() {
     if (!currentGame || !currentPlayer) return;
     try {
@@ -1258,6 +1482,11 @@
   let lastKnownScore = null;
   let lastKnownRoundNumber = null;
   let lastCardValue = null;
+  let lastRoundNumberForHistory = null;
+  let lastScoreByPlayer = new Map();
+  let lastRoundDeltas = new Map();
+  let guessHistory = [];
+  let lastGuessByRound = {};
 
   // DOM refs
   const setupSection = document.getElementById("setup-section");
@@ -1285,6 +1514,11 @@
   const guessFeedbackEl = document.getElementById("guess-feedback");
   const currentGuessLabelEl = document.getElementById("current-guess-label");
   const currentGuessValueEl = document.getElementById("current-guess-value");
+  const guessHistoryEl = document.getElementById("guess-history");
+  const guessHistoryTitleEl = document.getElementById("guess-history-title");
+  const helpModal = document.getElementById("help-modal");
+  const helpCloseBtn = document.getElementById("help-close-btn");
+  const helpModalTitleEl = document.getElementById("help-modal-title");
 
   let uiUpdatePending = false;
   function scheduleUIUpdate() {
@@ -1297,12 +1531,37 @@
     });
   }
 
-  if (helpToggleBtn && helpPanel) {
-    helpToggleBtn.addEventListener("click", () => {
-      const isVisible = helpPanel.classList.toggle("visible");
-      helpToggleBtn.classList.toggle("active", isVisible);
+  function openHelpModal() {
+    if (!helpModal) return;
+    helpModal.classList.add("visible");
+    helpModal.setAttribute("aria-hidden", "false");
+    helpToggleBtn?.classList.add("active");
+  }
+
+  function closeHelpModal() {
+    if (!helpModal) return;
+    helpModal.classList.remove("visible");
+    helpModal.setAttribute("aria-hidden", "true");
+    helpToggleBtn?.classList.remove("active");
+  }
+
+  if (helpToggleBtn && helpModal) {
+    helpToggleBtn.addEventListener("click", openHelpModal);
+  }
+
+  if (helpCloseBtn) {
+    helpCloseBtn.addEventListener("click", closeHelpModal);
+  }
+
+  if (helpModal) {
+    helpModal.addEventListener("click", e => {
+      if (e.target === helpModal) closeHelpModal();
     });
   }
+
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape") closeHelpModal();
+  });
 
   function updateRoomUI() {
     const t = textMap[currentLang];
@@ -1312,6 +1571,8 @@
     const now = Date.now();
     const inIntermission =
       currentGame.status === "running" && timings && now < timings.guessStartMs;
+
+    handleRoundHistoryTransition();
 
     roomCodeEl.textContent = currentGame.slug;
     const link = `${window.location.origin}${window.location.pathname}?game=${currentGame.slug}`;
@@ -1473,6 +1734,23 @@
       pts.className = "score-points";
       const s = p.score || 0;
       pts.textContent = s > 0 ? `+${s}` : `${s}`;
+      const outcome = document.createElement("div");
+      outcome.className = "score-outcome";
+      const delta = lastRoundDeltas.has(p.id) ? lastRoundDeltas.get(p.id) : null;
+      if (delta !== null) {
+        if (delta > 0) {
+          outcome.classList.add("win");
+          outcome.textContent = "✔";
+        } else if (delta < 0) {
+          outcome.classList.add("lose");
+          outcome.textContent = "✖";
+        } else {
+          outcome.textContent = "•";
+        }
+      } else {
+        outcome.textContent = "•";
+      }
+      row.appendChild(outcome);
       row.appendChild(name);
       row.appendChild(pts);
       scoreboardBodyEl.appendChild(row);
@@ -1563,6 +1841,9 @@
       if (currentPlayer) {
         const me = players.find(p => p.id === currentPlayer.id);
         if (me) currentPlayer = me;
+        if (currentGame && me && me.last_guess) {
+          lastGuessByRound[currentGame.round_number || 1] = me.last_guess;
+        }
       }
       scheduleUIUpdate();
     }
@@ -1645,6 +1926,51 @@
       updateTimerVisuals();
       if (isCreator) checkRoundTimeout();
     }, 200);
+  }
+
+  function handleRoundHistoryTransition() {
+    if (!currentGame) return;
+    const roundNum = currentGame.round_number || 1;
+
+    if (lastRoundNumberForHistory === null) {
+      players.forEach(p => lastScoreByPlayer.set(p.id, p.score || 0));
+      lastRoundNumberForHistory = roundNum;
+      return;
+    }
+
+    if (roundNum === lastRoundNumberForHistory) {
+      players.forEach(p => lastScoreByPlayer.set(p.id, p.score || 0));
+      return;
+    }
+
+    const deltas = new Map();
+    players.forEach(p => {
+      const prev = lastScoreByPlayer.get(p.id) || 0;
+      const delta = (p.score || 0) - prev;
+      deltas.set(p.id, delta);
+    });
+
+    lastRoundDeltas = deltas;
+
+    const previousCard = lastCardValue;
+    const nextCard = currentGame.current_card ?? null;
+    if (currentPlayer) {
+      const myDelta = deltas.has(currentPlayer.id) ? deltas.get(currentPlayer.id) : 0;
+      const myGuess = lastGuessByRound[lastRoundNumberForHistory] || currentPlayer.last_guess;
+      if (previousCard !== null && nextCard !== null) {
+        addHistoryEntry({
+          round: lastRoundNumberForHistory,
+          from: previousCard,
+          to: nextCard,
+          guess: myGuess,
+          delta: myDelta
+        });
+      }
+      delete lastGuessByRound[lastRoundNumberForHistory];
+    }
+
+    players.forEach(p => lastScoreByPlayer.set(p.id, p.score || 0));
+    lastRoundNumberForHistory = roundNum;
   }
 
   function updateTimerVisuals() {
@@ -1741,6 +2067,7 @@
     currentGame = game;
     currentPlayer = player;
     resetLocalScoreSoundState();
+    resetHistoryTracking();
 
     setupSection.style.display = "none";
     gameSection.style.display = "block";
@@ -1797,6 +2124,7 @@
     currentGame = game;
     currentPlayer = player;
     resetLocalScoreSoundState();
+    resetHistoryTracking();
 
     setupSection.style.display = "none";
     gameSection.style.display = "block";
@@ -1848,6 +2176,7 @@
 
     currentGame = data;
     resetLocalScoreSoundState();
+    resetHistoryTracking();
     log(t.logStart(firstCard, currentGame.time_limit_seconds));
     scheduleUIUpdate();
   }
@@ -1927,6 +2256,7 @@
       setGuessFeedback(t.guessSaved, false);
       currentPlayer = data;
       players = players.map(p => (p.id === data.id ? data : p));
+      lastGuessByRound[currentGame.round_number || 1] = direction;
       scheduleUIUpdate();
     }
   }
@@ -1936,6 +2266,7 @@
     if (pollInterval) clearInterval(pollInterval);
     if (timerInterval) clearInterval(timerInterval);
     resetLocalScoreSoundState();
+    resetHistoryTracking();
     window.location.href = window.location.pathname;
   }
 
@@ -2179,6 +2510,7 @@
 
     currentGame = data;
     resetLocalScoreSoundState();
+    resetHistoryTracking();
     log(t.logStart(firstCard, currentGame.time_limit_seconds));
     await fetchPlayers(currentGame.id);
     scheduleUIUpdate();
@@ -2215,6 +2547,7 @@
     currentPlayer = player;
     isCreator = !!player.is_creator;
     resetLocalScoreSoundState();
+    resetHistoryTracking();
 
     setupSection.style.display = "none";
     gameSection.style.display = "block";
