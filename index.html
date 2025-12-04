@@ -85,6 +85,19 @@
       margin-top: 16px;
     }
 
+    .game-meta-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    @media (min-width: 820px) {
+      .game-meta-grid {
+        grid-template-columns: 1.2fr 1fr;
+        align-items: stretch;
+      }
+    }
+
     .col {
       flex: 1 1 260px;
     }
@@ -178,17 +191,28 @@
       border: 1px solid rgba(55, 65, 81, 0.9);
       background: rgba(15, 23, 42, 0.95);
       padding: 10px 12px;
-      max-height: 240px;
+      max-height: 280px;
       overflow-y: auto;
-      font-size: 0.85rem;
+      font-size: 0.9rem;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
     }
 
+    .players-block { margin-top: 10px; }
+
     .player-row {
-      display: flex;
-      justify-content: space-between;
+      display: grid;
+      grid-template-columns: 1.4fr 1fr auto;
+      gap: 6px;
       align-items: center;
-      padding: 4px 0;
+      padding: 6px 6px;
       border-bottom: 1px dashed rgba(31, 41, 55, 0.7);
+      border-radius: 10px;
+    }
+
+    .player-row.you {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      box-shadow: 0 6px 20px rgba(56, 189, 248, 0.08);
     }
 
     .player-row:last-child { border-bottom: none; }
@@ -197,6 +221,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      font-weight: 600;
     }
 
     .player-dot {
@@ -207,12 +232,27 @@
     }
 
     .player-tag {
-      font-size: 0.7rem;
-      padding: 2px 6px;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      color: #9ca3af;
+      font-size: 0.75rem;
+      padding: 3px 7px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      color: #e5e7eb;
       margin-left: 4px;
+      background: rgba(255,255,255,0.03);
+      font-weight: 600;
+    }
+
+    .player-flags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      justify-content: flex-start;
+    }
+
+    .player-score {
+      font-weight: 700;
+      color: #e5edff;
+      text-align: right;
     }
 
     .status-banner {
@@ -423,6 +463,11 @@
       transform: translateY(-1px);
     }
 
+    .guess-btn-pressed {
+      transform: translateY(-2px) scale(0.995) !important;
+      box-shadow: 0 10px 22px rgba(56, 189, 248, 0.4) !important;
+    }
+
     .guess-info {
       font-size: 0.8rem;
       color: var(--text-soft);
@@ -431,6 +476,24 @@
       border-radius: 10px;
       padding: 10px 12px;
     }
+
+    .guess-feedback {
+      margin-top: 6px;
+      font-weight: 600;
+    }
+
+    .guess-feedback.error { color: var(--danger); }
+
+    .current-guess-row {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      color: #e5edff;
+    }
+
+    .current-guess-label { color: var(--text-soft); font-weight: 600; }
 
     .log {
       margin-top: 12px;
@@ -478,9 +541,19 @@
       border-bottom: 1px dashed rgba(31,41,55,0.7);
     }
 
+    .score-row.you {
+      background: rgba(56, 189, 248, 0.08);
+      border-radius: 8px;
+      padding: 6px 8px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
     .score-row:last-child { border-bottom: none; }
 
-    .score-points { font-weight: 600; }
+    .score-points {
+      font-weight: 700;
+      color: #e5edff;
+    }
 
     .error {
       color: var(--danger);
@@ -528,6 +601,7 @@
       top: 12px;
       display: flex;
       gap: 6px;
+      align-items: center;
     }
 
     .lang-btn {
@@ -545,6 +619,23 @@
       color: var(--accent);
       box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
     }
+
+    .help-icon-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+    }
+
+    .help-icon-btn:hover { box-shadow: 0 10px 30px rgba(56, 189, 248, 0.2); }
 
     @keyframes panelGlow {
       0%, 100% { opacity: 0.5; }
@@ -600,6 +691,7 @@
     <div class="lang-switch">
       <button class="lang-btn active" data-lang="tr">🇹🇷 TR</button>
       <button class="lang-btn" data-lang="en">🇬🇧 EN</button>
+      <button id="help-toggle-btn" class="help-icon-btn" aria-label="Help">❓</button>
     </div>
 
     <h1>
@@ -657,7 +749,7 @@
 
     <!-- GAME -->
     <div id="game-section" style="display:none; margin-top:16px;">
-      <div class="row">
+      <div class="game-meta-grid">
         <div class="col">
           <div class="section-title" id="room-section-title">Oda</div>
           <div class="pill">
@@ -677,20 +769,18 @@
             <strong id="room-target">-</strong>
           </div>
         </div>
-        <div class="col">
-          <div class="section-title" id="players-section-title">Oyuncular</div>
-          <div class="players" id="players-list"></div>
+
+        <div class="status-banner">
+          <div id="status-text" class="status-text">Oyun henüz başlamadı.</div>
+          <div class="status-actions-wrap">
+            <div id="status-actions"></div>
+          </div>
         </div>
       </div>
 
-      <div class="status-banner">
-        <div id="status-text" class="status-text">Oyun henüz başlamadı.</div>
-        <div class="status-actions-wrap">
-          <button id="help-toggle-btn" class="secondary" style="margin-left:8px;">
-            ❓ <span id="help-toggle-text">Yardım / Nasıl Oynanır</span>
-          </button>
-          <div id="status-actions"></div>
-        </div>
+      <div class="players-block">
+        <div class="section-title" id="players-section-title">Oyuncular</div>
+        <div class="players" id="players-list"></div>
       </div>
 
       <div class="card-panel">
@@ -732,7 +822,12 @@
               </div>
             </div>
             <div class="guess-info" id="guess-info">
-              Her tur: Tahmin etmeyen -1 puan, doğru tahmin +2 puan, yanlış tahmin 0 puan.
+              <div id="guess-info-text">Her tur: Tahmin etmeyen -1 puan, doğru tahmin +2 puan, yanlış tahmin 0 puan.</div>
+              <div class="guess-feedback" id="guess-feedback"></div>
+              <div class="current-guess-row">
+                <span class="current-guess-label" id="current-guess-label">Güncel tahminin:</span>
+                <span id="current-guess-value">Yok</span>
+              </div>
             </div>
           </div>
         </div>
@@ -826,6 +921,14 @@
       timerLabel: "Kalan süre",
       guessInfo:
         "Puan: Tahmin yok -1. Güvenli doğru +1 / riskli doğru +3. Yanlış: güvenli 0, riskli -1. 'Aynı kart gelir' doğru +5, yanlış -2. Combo çarpanı streak'e göre artar, kalkan bir kez cezayı siler.",
+      currentGuessLabel: "Güncel tahminin:",
+      guessValueNone: "Yok",
+      guessValueHigher: "Daha yüksek",
+      guessValueLower: "Daha alçak",
+      guessValueSame: "Aynı",
+      guessTooEarly: "Ara veriliyor, geri sayım bitince tahmin yapabilirsin.",
+      guessTooLate: "Süre bitti, tahmin alınamıyor.",
+      guessSaved: "Tahmin kaydedildi!",
       youLabel: "Sen",
       hostTag: "Kurucu",
       winnerPrefix: "Kazanan:",
@@ -882,6 +985,14 @@
       timerLabel: "Time left",
       guessInfo:
         "Points: No guess -1. Safe correct +1 / risky correct +3. Wrong: safe 0, risky -1. 'Same card' correct +5, wrong -2. Combo multiplier grows with streak; shield negates one negative round.",
+      currentGuessLabel: "Your current guess:",
+      guessValueNone: "None",
+      guessValueHigher: "Higher",
+      guessValueLower: "Lower",
+      guessValueSame: "Same",
+      guessTooEarly: "Intermission now; guesses open when the timer starts.",
+      guessTooLate: "Time is over; guess window closed.",
+      guessSaved: "Guess saved!",
       youLabel: "You",
       hostTag: "Host",
       winnerPrefix: "Winner:",
@@ -926,11 +1037,15 @@
     document.getElementById("btn-higher-text").textContent = t.btnHigher;
     document.getElementById("btn-lower-text").textContent = t.btnLower;
     document.getElementById("btn-same-text").textContent = t.btnSame;
-    const helpToggleText = document.getElementById("help-toggle-text");
-    if (helpToggleText) helpToggleText.textContent = t.helpButtonLabel;
     document.getElementById("timer-label").textContent = t.timerLabel;
-    document.getElementById("guess-info").textContent = t.guessInfo;
+    if (guessInfoTextEl) guessInfoTextEl.textContent = t.guessInfo;
+    if (currentGuessLabelEl) currentGuessLabelEl.textContent = t.currentGuessLabel;
+    if (helpToggleBtn) {
+      helpToggleBtn.setAttribute("aria-label", t.helpButtonLabel);
+      helpToggleBtn.title = t.helpButtonLabel;
+    }
     intermissionLabelEl.textContent = t.intermissionLabel;
+    updateCurrentGuessDisplay();
     updateRoomUI();
   }
 
@@ -1002,6 +1117,21 @@
     osc.stop(ctx.currentTime + 0.25);
   }
 
+  function playClickSound() {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(520, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.12);
+  }
+
   // --- Helpers ---
   function randomSlug(len = 6) {
     return Math.random().toString(36).substring(2, 2 + len).toUpperCase();
@@ -1049,6 +1179,28 @@
     const deadlineMs = new Date(currentGame.deadline_at).getTime();
     const guessStartMs = deadlineMs - currentGame.time_limit_seconds * 1000;
     return { deadlineMs, guessStartMs };
+  }
+
+  function translateGuessValue(val) {
+    const t = textMap[currentLang];
+    if (val === "higher") return t.guessValueHigher;
+    if (val === "lower") return t.guessValueLower;
+    if (val === "same") return t.guessValueSame;
+    return t.guessValueNone;
+  }
+
+  function setGuessFeedback(message = "", isError = false) {
+    if (!guessFeedbackEl) return;
+    guessFeedbackEl.textContent = message || "";
+    guessFeedbackEl.classList.toggle("error", !!isError && !!message);
+  }
+
+  function updateCurrentGuessDisplay() {
+    const t = textMap[currentLang];
+    if (currentGuessLabelEl) currentGuessLabelEl.textContent = t.currentGuessLabel;
+    if (!currentGuessValueEl) return;
+    const me = players.find(p => p.id === (currentPlayer && currentPlayer.id));
+    currentGuessValueEl.textContent = translateGuessValue(me && me.last_guess);
   }
 
   function saveLocalState() {
@@ -1129,7 +1281,10 @@
   const guessBtnSame = document.getElementById("btn-guess-same");
   const helpPanel = document.getElementById("how-to-play");
   const helpToggleBtn = document.getElementById("help-toggle-btn");
-  const helpToggleText = document.getElementById("help-toggle-text");
+  const guessInfoTextEl = document.getElementById("guess-info-text");
+  const guessFeedbackEl = document.getElementById("guess-feedback");
+  const currentGuessLabelEl = document.getElementById("current-guess-label");
+  const currentGuessValueEl = document.getElementById("current-guess-value");
 
   let uiUpdatePending = false;
   function scheduleUIUpdate() {
@@ -1196,6 +1351,7 @@
     players.forEach(p => {
       const row = document.createElement("div");
       row.className = "player-row";
+      if (currentPlayer && p.id === currentPlayer.id) row.classList.add("you");
 
       const left = document.createElement("div");
       left.className = "player-name";
@@ -1205,16 +1361,25 @@
       left.appendChild(dot);
 
       const nameSpan = document.createElement("span");
-      const youPrefix = currentPlayer && p.id === currentPlayer.id ? `(${t.youLabel}) ` : "";
-      nameSpan.textContent = youPrefix + p.name;
+      nameSpan.textContent = p.name;
       left.appendChild(nameSpan);
 
-      const right = document.createElement("div");
+      if (currentPlayer && p.id === currentPlayer.id) {
+        const youTag = document.createElement("span");
+        youTag.className = "player-tag";
+        youTag.style.borderColor = "rgba(56,189,248,0.7)";
+        youTag.style.color = "var(--accent)";
+        youTag.textContent = t.youLabel;
+        left.appendChild(youTag);
+      }
+
+      const flags = document.createElement("div");
+      flags.className = "player-flags";
       if (p.is_creator) {
         const hostTag = document.createElement("span");
         hostTag.className = "player-tag";
         hostTag.textContent = t.hostTag;
-        right.appendChild(hostTag);
+        flags.appendChild(hostTag);
       }
       const streakVal = p.streak || 0;
       const comboMult = getComboMultiplier(streakVal);
@@ -1224,7 +1389,7 @@
         comboTag.style.borderColor = "rgba(56,189,248,0.5)";
         comboTag.style.color = "var(--accent)";
         comboTag.textContent = `COMBO x${comboMult}`;
-        right.appendChild(comboTag);
+        flags.appendChild(comboTag);
       }
       if (p.has_shield) {
         const shieldTag = document.createElement("span");
@@ -1232,7 +1397,7 @@
         shieldTag.style.borderColor = "rgba(129,140,248,0.6)";
         shieldTag.style.color = "#c4d4ff";
         shieldTag.textContent = "🛡";
-        right.appendChild(shieldTag);
+        flags.appendChild(shieldTag);
       }
       if (p.last_guess === "higher") {
         const g = document.createElement("span");
@@ -1240,7 +1405,7 @@
         g.style.borderColor = "#22c55e";
         g.style.color = "#22c55e";
         g.textContent = "🔺";
-        right.appendChild(g);
+        flags.appendChild(g);
       }
       if (p.last_guess === "lower") {
         const g = document.createElement("span");
@@ -1248,7 +1413,7 @@
         g.style.borderColor = "#fb923c";
         g.style.color = "#fb923c";
         g.textContent = "🔻";
-        right.appendChild(g);
+        flags.appendChild(g);
       }
       if (p.last_guess === "same") {
         const g = document.createElement("span");
@@ -1256,11 +1421,17 @@
         g.style.borderColor = "rgba(129,140,248,0.7)";
         g.style.color = "#c7d2fe";
         g.textContent = "⭕";
-        right.appendChild(g);
+        flags.appendChild(g);
       }
 
+      const score = document.createElement("div");
+      score.className = "player-score";
+      const s = p.score || 0;
+      score.textContent = s > 0 ? `+${s}` : `${s}`;
+
       row.appendChild(left);
-      row.appendChild(right);
+      row.appendChild(flags);
+      row.appendChild(score);
       playersList.appendChild(row);
     });
 
@@ -1275,8 +1446,15 @@
     sorted.forEach(p => {
       const row = document.createElement("div");
       row.className = "score-row";
+      if (currentPlayer && p.id === currentPlayer.id) row.classList.add("you");
       const name = document.createElement("div");
       name.textContent = p.name;
+      if (currentPlayer && p.id === currentPlayer.id) {
+        const youTag = document.createElement("span");
+        youTag.className = "tagline";
+        youTag.textContent = t.youLabel;
+        name.appendChild(youTag);
+      }
       const streakVal = p.streak || 0;
       const comboMult = getComboMultiplier(streakVal);
       if (streakVal > 1) {
@@ -1366,6 +1544,12 @@
       "selected",
       !!me && me.last_guess === "same"
     );
+
+    if (canGuess && !alreadyGuessed) {
+      setGuessFeedback("");
+    }
+
+    updateCurrentGuessDisplay();
   }
 
   async function fetchPlayers(gameId) {
@@ -1515,6 +1699,8 @@
       return;
     }
 
+    playClickSound();
+
     const slug = randomSlug();
 
     const { data: game, error } = await supabase
@@ -1588,6 +1774,8 @@
       return;
     }
 
+    playClickSound();
+
     const { data: player, error: pErr } = await supabase
       .from("hl_players")
       .insert({
@@ -1630,6 +1818,8 @@
       return;
     }
 
+    playClickSound();
+
     const firstCard = randCard();
     const now = new Date();
     const guessStart = new Date(now.getTime() + INTERMISSION_MS);
@@ -1665,6 +1855,7 @@
   async function endGame() {
     if (!currentGame || !isCreator) return;
     const t = textMap[currentLang];
+    playClickSound();
     const now = new Date();
     const { data, error } = await supabase
       .from("hl_games")
@@ -1680,19 +1871,38 @@
     }
   }
 
-  async function sendGuess(direction) {
+  async function sendGuess(direction, btnEl) {
+    const t = textMap[currentLang];
     if (!currentGame || !currentPlayer) return;
-    if (currentGame.status !== "running" || !currentGame.deadline_at) return;
-
-    getAudioCtx(); // user interaction
+    if (currentGame.status !== "running" || !currentGame.deadline_at) {
+      setGuessFeedback(t.guessTooLate, true);
+      return;
+    }
 
     const timings = getRoundTiming();
     const now = Date.now();
     if (!timings) return;
-    if (now < timings.guessStartMs || now > timings.deadlineMs) return;
+    if (now < timings.guessStartMs) {
+      setGuessFeedback(t.guessTooEarly, true);
+      return;
+    }
+    if (now > timings.deadlineMs) {
+      setGuessFeedback(t.guessTooLate, true);
+      return;
+    }
 
     const me = players.find(p => p.id === currentPlayer.id);
-    if (me && me.last_guess) return; // bir kere tahmin
+    if (me && me.last_guess) {
+      setGuessFeedback(t.guessSaved, false);
+      return;
+    }
+
+    getAudioCtx();
+
+    if (btnEl) {
+      btnEl.classList.add("guess-btn-pressed");
+      setTimeout(() => btnEl.classList.remove("guess-btn-pressed"), 180);
+    }
 
     const { data, error } = await supabase
       .from("hl_players")
@@ -1703,10 +1913,18 @@
 
     if (error) {
       console.error("Failed to save guess:", error);
+      setGuessFeedback(
+        currentLang === "tr"
+          ? "Tahmin kaydedilemedi."
+          : "Guess could not be saved.",
+        true
+      );
       return;
     }
 
     if (data) {
+      playClickSound();
+      setGuessFeedback(t.guessSaved, false);
       currentPlayer = data;
       players = players.map(p => (p.id === data.id ? data : p));
       scheduleUIUpdate();
@@ -1928,6 +2146,8 @@
     if (!currentGame || !isCreator) return;
     const t = textMap[currentLang];
 
+    playClickSound();
+
     await supabase
       .from("hl_players")
       .update({ score: 0, last_guess: null, streak: 0, has_shield: false })
@@ -2008,9 +2228,9 @@
   // Events
   document.getElementById("create-game-btn").onclick = createGame;
   document.getElementById("join-game-btn").onclick = joinGameByCode;
-  guessBtnHigher.onclick = () => sendGuess("higher");
-  guessBtnLower.onclick = () => sendGuess("lower");
-  guessBtnSame.onclick = () => sendGuess("same");
+  guessBtnHigher.onclick = () => sendGuess("higher", guessBtnHigher);
+  guessBtnLower.onclick = () => sendGuess("lower", guessBtnLower);
+  guessBtnSame.onclick = () => sendGuess("same", guessBtnSame);
 
   const langButtons = document.querySelectorAll(".lang-btn");
   langButtons.forEach(btn => {
