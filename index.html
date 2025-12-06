@@ -1081,6 +1081,7 @@
       labelJoinCode: "Oda Kodu",
       btnCreate: "Oyun Oluştur",
       btnJoin: "Oyuna Katıl",
+      btnAddBot: "Bot ekle",
       joinHelp: "Eğer linkle geldiysen kod otomatik dolabilir.",
       roomSectionTitle: "Oda",
       roomCodeLabel: "Oda kodu:",
@@ -1105,6 +1106,7 @@
       errorNameRequired: "İsmini yazmalısın.",
       errorCodeRequired: "Oda kodu boş olamaz.",
       errorRoomNotFound: "Böyle bir oda bulunamadı.",
+      botTag: "Bot",
       timerLabel: "Kalan süre",
       guessInfo:
         "Puan: Tahmin yok -1. Güvenli doğru +1 / riskli doğru +3. Yanlış: güvenli 0, riskli -1. 'Aynı kart gelir' doğru +5, yanlış -2. Combo çarpanı streak'e göre artar, kalkan bir kez cezayı siler.",
@@ -1135,6 +1137,8 @@
       logNoGuess: name => `${name} tahmin yapmadı.`,
       logEndedByHost: "Oyun kurucu tarafından bitirildi.",
       logAutoLow: "Tüm oyuncular -20'nin altında. Oyun otomatik sona erdi.",
+      logBotAdded: name => `${name} odaya katıldı (bot).`,
+      logBotAutoAdded: name => `${name} otomatik eklendi, yalnız oynamak istemiyor musun?`
     },
     en: {
       title: "HighLow 21",
@@ -1148,6 +1152,7 @@
       labelJoinCode: "Room Code",
       btnCreate: "Create Game",
       btnJoin: "Join Game",
+      btnAddBot: "Add Bot",
       joinHelp: "If you came via link, the code may auto-fill.",
       roomSectionTitle: "Room",
       roomCodeLabel: "Room code:",
@@ -1172,6 +1177,7 @@
       errorNameRequired: "Please enter your name.",
       errorCodeRequired: "Room code cannot be empty.",
       errorRoomNotFound: "Room not found.",
+      botTag: "Bot",
       timerLabel: "Time left",
       guessInfo:
         "Points: No guess -1. Safe correct +1 / risky correct +3. Wrong: safe 0, risky -1. 'Same card' correct +5, wrong -2. Combo multiplier grows with streak; shield negates one negative round.",
@@ -1202,6 +1208,8 @@
       logNoGuess: name => `${name} made no guess.`,
       logEndedByHost: "Game ended by host.",
       logAutoLow: "All players reached very low scores. Game finished.",
+      logBotAdded: name => `${name} joined (bot).`,
+      logBotAutoAdded: name => `${name} was auto-added so you can play right away.`
     }
   };
 
@@ -1367,6 +1375,31 @@
     )},85%,45%))`;
   }
 
+  function isBotPlayer(p) {
+    return !!(p && (p.is_bot || (typeof p.name === "string" && p.name.startsWith("🤖"))));
+  }
+
+  function nextBotName() {
+    const count = players.filter(isBotPlayer).length;
+    return `🤖 Bot ${count + 1}`;
+  }
+
+  function pickBotGuess(current) {
+    if (!current) return Math.random() > 0.5 ? "higher" : "lower";
+    const spicy = Math.random();
+    if (spicy > 0.92) return "same";
+    const preferHigher = current <= 10;
+    if (spicy > 0.7) {
+      return preferHigher ? "higher" : "lower";
+    }
+    const safeHigher = isSafeGuess(current, "higher");
+    const safeLower = isSafeGuess(current, "lower");
+    if (safeHigher && !safeLower) return "higher";
+    if (safeLower && !safeHigher) return "lower";
+    if (safeHigher && safeLower) return preferHigher ? "higher" : "lower";
+    return Math.random() > 0.5 ? "higher" : "lower";
+  }
+
   function getRoundTiming() {
     if (!currentGame || !currentGame.deadline_at || !currentGame.time_limit_seconds) {
       return null;
@@ -1520,6 +1553,7 @@
   let lastRoundDeltas = new Map();
   let guessHistory = [];
   let lastGuessByRound = {};
+  let botActionInFlight = false;
 
   // DOM refs
   const setupSection = document.getElementById("setup-section");
@@ -1626,7 +1660,7 @@
     statusText.textContent = label;
 
     // current card visuals
-    const showHiddenCard = inIntermission || !currentGame.current_card;
+    const showHiddenCard = !currentGame.current_card;
     if (!showHiddenCard && currentGame.current_card) {
       const v = currentGame.current_card;
       cardValueEl.textContent = v.toString();
@@ -1678,6 +1712,14 @@
         hostTag.className = "player-tag";
         hostTag.textContent = t.hostTag;
         flags.appendChild(hostTag);
+      }
+      if (isBotPlayer(p)) {
+        const botTag = document.createElement("span");
+        botTag.className = "player-tag";
+        botTag.textContent = t.botTag;
+        botTag.style.borderColor = "rgba(148,163,184,0.8)";
+        botTag.style.color = "var(--text-soft)";
+        flags.appendChild(botTag);
       }
       const streakVal = p.streak || 0;
       const comboMult = getComboMultiplier(streakVal);
@@ -1768,6 +1810,12 @@
         youTag.textContent = t.youLabel;
         name.appendChild(youTag);
       }
+      if (isBotPlayer(p)) {
+        const botLine = document.createElement("span");
+        botLine.className = "tagline";
+        botLine.textContent = t.botTag;
+        name.appendChild(botLine);
+      }
       const streakVal = p.streak || 0;
       const comboMult = getComboMultiplier(streakVal);
       if (streakVal > 1) {
@@ -1828,6 +1876,12 @@
     // action buttons
     statusActions.innerHTML = "";
     if (isCreator && currentGame.status === "waiting") {
+      const addBotBtn = document.createElement("button");
+      addBotBtn.className = "secondary";
+      addBotBtn.textContent = t.btnAddBot;
+      addBotBtn.onclick = () => addBotPlayer();
+      statusActions.appendChild(addBotBtn);
+
       const startBtn = document.createElement("button");
       startBtn.textContent = t.btnStartGame;
       startBtn.onclick = startGame;
@@ -1993,7 +2047,10 @@
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       updateTimerVisuals();
-      if (isCreator) checkRoundTimeout();
+      if (isCreator) {
+        maybeSubmitBotGuesses();
+        checkRoundTimeout();
+      }
     }, 200);
   }
 
@@ -2080,6 +2137,33 @@
     }
   }
 
+  async function maybeSubmitBotGuesses() {
+    if (!isCreator || botActionInFlight) return;
+    if (!currentGame || currentGame.status !== "running") return;
+
+    const timings = getRoundTiming();
+    if (!timings) return;
+    const now = Date.now();
+    if (now < timings.guessStartMs || now > timings.deadlineMs) return;
+
+    const botPlayers = players.filter(p => isBotPlayer(p) && !p.last_guess);
+    if (!botPlayers.length) return;
+
+    botActionInFlight = true;
+    try {
+      const updates = botPlayers.map(p => {
+        const direction = pickBotGuess(currentGame.current_card);
+        return supabase
+          .from("hl_players")
+          .update({ last_guess: direction })
+          .eq("id", p.id);
+      });
+      await Promise.all(updates);
+    } finally {
+      botActionInFlight = false;
+    }
+  }
+
   // --- Game actions ---
   async function createGame() {
     const t = textMap[currentLang];
@@ -2148,6 +2232,40 @@
     await fetchPlayers(game.id);
   }
 
+  async function addBotPlayer(silent = false) {
+    if (!currentGame || !isCreator) return null;
+    const t = textMap[currentLang];
+    const botName = nextBotName();
+
+    const { data, error } = await supabase
+      .from("hl_players")
+      .insert({
+        game_id: currentGame.id,
+        name: botName,
+        is_creator: false,
+        streak: 0,
+        has_shield: false
+      })
+      .select()
+      .single();
+
+    if (error) {
+      log("Bot eklenemedi: " + error.message);
+      return null;
+    }
+
+    log(silent ? t.logBotAutoAdded(botName) : t.logBotAdded(botName));
+    await fetchPlayers(currentGame.id);
+    return data;
+  }
+
+  async function ensureBotForSolo() {
+    const hasBot = players.some(isBotPlayer);
+    if (hasBot) return true;
+    const bot = await addBotPlayer(true);
+    return !!bot;
+  }
+
   async function joinGameByCode() {
     const t = textMap[currentLang];
     const name = document.getElementById("join-name").value.trim();
@@ -2209,7 +2327,13 @@
     if (!currentGame || !isCreator) return;
     const t = textMap[currentLang];
 
-    const aliveCount = players.length;
+    let aliveCount = players.length;
+    if (aliveCount < 2) {
+      const added = await ensureBotForSolo();
+      if (added) {
+        aliveCount = players.length;
+      }
+    }
     if (aliveCount < 2) {
       log(currentLang === "tr" ? "En az 2 oyuncu olmalı." : "At least 2 players are required.");
       return;
