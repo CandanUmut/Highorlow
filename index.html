@@ -556,6 +556,17 @@
       font-size: 0.8rem;
     }
 
+    .audio-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .audio-controls input[type="range"] {
+      flex: 1;
+    }
+
     .tagline {
       display: inline-flex;
       align-items: center;
@@ -1012,13 +1023,24 @@
           </div>
         </div>
 
-        <div class="log" id="log"></div>
-      </div>
+      <div class="log" id="log"></div>
+    </div>
 
-      <div class="scoreboard" id="scoreboard">
-        <div class="section-title" id="scoreboard-title">Skor Tablosu</div>
-        <div id="scoreboard-body"></div>
+    <div class="scoreboard" id="scoreboard">
+      <div class="section-title" id="scoreboard-title">Skor Tablosu</div>
+      <div class="audio-controls" aria-label="Ses ayarları">
+        <button id="mute-toggle" class="secondary" title="Mute / Unmute" aria-label="Mute / Unmute">🔊</button>
+        <input
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          id="volume-slider"
+          aria-label="Volume"
+        />
       </div>
+      <div id="scoreboard-body"></div>
+    </div>
 
       <div class="modal-overlay" id="help-modal" aria-hidden="true" role="dialog">
         <div class="modal-content">
@@ -1061,9 +1083,13 @@
 
   const LS_KEY = "hl21_state_v1";
   const LS_LANG = "hl21_lang";
+  const LS_AUDIO = "hl21_audio_v1";
   const GRACE_MS = 1000;
   const INTERMISSION_MS = 3000;
   const VERY_LOW_SCORE = -20;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const debugMode = urlParams.has("debug");
 
   // --- i18n ---
   let currentLang = localStorage.getItem(LS_LANG) || "tr";
@@ -1253,91 +1279,124 @@
   }
 
   // --- Audio ---
+  const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   let audioCtx = null;
+  let audioGain = null;
+  let audioSettings = { volume: 0.7, muted: false };
+  try {
+    const savedAudio = localStorage.getItem(LS_AUDIO);
+    if (savedAudio) audioSettings = { ...audioSettings, ...JSON.parse(savedAudio) };
+  } catch (_) {}
+
+  function persistAudioSettings() {
+    try {
+      localStorage.setItem(LS_AUDIO, JSON.stringify(audioSettings));
+    } catch (_) {}
+  }
+
+  function updateAudioGain() {
+    if (audioGain) {
+      audioGain.gain.setValueAtTime(audioSettings.muted ? 0 : audioSettings.volume, audioCtx.currentTime);
+    }
+  }
+
   function getAudioCtx() {
     if (!audioCtx) {
       const AC = window.AudioContext || window.webkitAudioContext;
-      if (AC) audioCtx = new AC();
+      if (AC) {
+        audioCtx = new AC();
+        audioGain = audioCtx.createGain();
+        audioGain.gain.value = audioSettings.muted ? 0 : audioSettings.volume;
+        audioGain.connect(audioCtx.destination);
+      }
     }
     return audioCtx;
   }
 
-  function playTickSound(remaining) {
+  function setVolume(v) {
+    audioSettings.volume = Math.min(1, Math.max(0, v));
+    audioSettings.muted = audioSettings.volume === 0 ? true : audioSettings.muted;
+    persistAudioSettings();
+    updateAudioGain();
+  }
+
+  function toggleMute() {
+    audioSettings.muted = !audioSettings.muted;
+    persistAudioSettings();
+    updateAudioGain();
+    const muteBtn = document.getElementById("mute-toggle");
+    if (muteBtn) muteBtn.textContent = audioSettings.muted ? "🔇" : "🔊";
+  }
+
+  function playTone(configurator, duration = 0.25) {
+    if (prefersReducedMotion || audioSettings.muted) return;
     const ctx = getAudioCtx();
-    if (!ctx) return;
+    if (!ctx || !audioGain) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
-    const baseFreq = remaining <= 3 ? 900 : 550;
-    osc.type = "square";
-    osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
-    gain.gain.setValueAtTime(remaining <= 3 ? 0.18 : 0.07, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+    configurator(osc, gain, ctx);
+    gain.gain.value = audioSettings.volume;
+    gain.connect(audioGain);
     osc.connect(gain);
-    gain.connect(ctx.destination);
     osc.start();
-    osc.stop(ctx.currentTime + 0.09);
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  function playTickSound(remaining) {
+    playTone((osc, gain, ctx) => {
+      const baseFreq = remaining <= 3 ? 900 : 550;
+      osc.type = "square";
+      osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+      gain.gain.setValueAtTime(remaining <= 3 ? 0.18 : 0.07, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.09);
+    }, 0.12);
   }
 
   function playRevealSound() {
-    const ctx = getAudioCtx();
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "triangle";
-    osc.frequency.setValueAtTime(420, ctx.currentTime);
-    osc.frequency.linearRampToValueAtTime(260, ctx.currentTime + 0.35);
-    gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.4);
+    playTone((osc, gain, ctx) => {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(420, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(260, ctx.currentTime + 0.35);
+      gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    }, 0.4);
   }
 
   function playScoreDeltaSound(delta) {
-    const ctx = getAudioCtx();
-    if (!ctx || delta === 0) return;
-
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    if (delta > 0) {
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(660, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.15);
-      gain.gain.setValueAtTime(0.18, ctx.currentTime);
-    } else {
-      osc.type = "square";
-      osc.frequency.setValueAtTime(220, ctx.currentTime);
-      osc.frequency.linearRampToValueAtTime(160, ctx.currentTime + 0.12);
-      gain.gain.setValueAtTime(0.16, ctx.currentTime);
-    }
-
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.25);
+    if (delta === 0) return;
+    playTone((osc, gain, ctx) => {
+      if (delta > 0) {
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(660, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(880, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+      } else {
+        osc.type = "square";
+        osc.frequency.setValueAtTime(220, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(160, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.16, ctx.currentTime);
+      }
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+    }, 0.25);
   }
 
   function playClickSound() {
-    const ctx = getAudioCtx();
-    if (!ctx) return;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(520, ctx.currentTime);
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.12);
+    playTone((osc, gain, ctx) => {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(520, ctx.currentTime);
+      gain.gain.setValueAtTime(0.12, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+    }, 0.12);
   }
 
   // --- Helpers ---
   function randomSlug(len = 6) {
     return Math.random().toString(36).substring(2, 2 + len).toUpperCase();
+  }
+
+  function devLog(tag, payload = {}) {
+    if (!debugMode) return;
+    console.debug(`[DEBUG:${tag}]`, payload);
   }
 
   function log(msg) {
@@ -2002,6 +2061,13 @@
     return data;
   }
 
+  async function resyncState() {
+    if (!currentGame) return;
+    const [game, _] = await Promise.all([fetchGameById(currentGame.id), fetchPlayers(currentGame.id)]);
+    if (game) currentGame = game;
+    scheduleUIUpdate();
+  }
+
   async function pollGameState() {
     if (!currentGame) return;
     const game = await fetchGameById(currentGame.id);
@@ -2014,18 +2080,30 @@
 
   function startPolling() {
     if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(pollGameState, 4000);
+    pollInterval = setInterval(pollGameState, 3000);
   }
 
+  let activeChannel = null;
+  let lastGameEventTs = 0;
+
   function attachRealtime(gameId) {
-    supabase
+    if (activeChannel) {
+      supabase.removeChannel(activeChannel);
+    }
+
+    const channel = supabase
       .channel("hl-game-" + gameId)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "hl_games", filter: `id=eq.${gameId}` },
         payload => {
+          const commitTs = payload.commit_timestamp ? Date.parse(payload.commit_timestamp) : Date.now();
+          if (commitTs < lastGameEventTs) return; // ignore stale
+          lastGameEventTs = commitTs;
           if (payload.new) {
             currentGame = payload.new;
+            if (debugMode)
+              console.debug("[DEBUG:game-event]", { commitTs, round: payload.new.round_number, status: payload.new.status });
             scheduleUIUpdate();
           }
         }
@@ -2033,12 +2111,24 @@
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "hl_players", filter: `game_id=eq.${gameId}` },
-        () => {
+        payload => {
+          if (debugMode)
+            console.debug("[DEBUG:player-event]", {
+              commitTs: payload.commit_timestamp,
+              player: payload.new?.id,
+              score: payload.new?.score,
+              round: currentGame?.round_number
+            });
           fetchPlayers(gameId);
         }
       )
-      .subscribe();
+      .subscribe(status => {
+        if (status === "SUBSCRIBED" && debugMode) {
+          console.debug("[DEBUG:realtime] subscribed", { gameId });
+        }
+      });
 
+    activeChannel = channel;
     startPolling();
     startTimerLoop();
   }
@@ -2419,6 +2509,14 @@
       return;
     }
 
+    const clientSubmittedAt = Date.now();
+    devLog("guess-attempt", {
+      round: currentGame.round_number,
+      player: currentPlayer.id,
+      guess: direction,
+      clientTs: new Date(clientSubmittedAt).toISOString()
+    });
+
     getAudioCtx();
 
     if (btnEl) {
@@ -2430,6 +2528,8 @@
       .from("hl_players")
       .update({ last_guess: direction })
       .eq("id", currentPlayer.id)
+      .eq("game_id", currentGame.id)
+      .is("last_guess", null)
       .select()
       .single();
 
@@ -2450,6 +2550,13 @@
       currentPlayer = data;
       players = players.map(p => (p.id === data.id ? data : p));
       lastGuessByRound[currentGame.round_number || 1] = direction;
+      devLog("guess-stored", {
+        round: currentGame.round_number,
+        player: currentPlayer.id,
+        guess: direction,
+        serverUpdatedAt: data.updated_at,
+        clientSubmittedAt
+      });
       scheduleUIUpdate();
     }
   }
@@ -2485,6 +2592,12 @@
 
     resolvingRound = true;
     const t = textMap[currentLang];
+    const resolveStartTs = Date.now();
+    devLog("round-resolve-start", {
+      round: currentGame.round_number,
+      deadline: currentGame.deadline_at,
+      clientTs: new Date(resolveStartTs).toISOString()
+    });
 
     try {
       const freshGame = await fetchGameById(currentGame.id);
@@ -2536,6 +2649,8 @@
       const current = freshGame.current_card;
       const next = randCard();
 
+      const resolvedPlayers = [];
+
       const updates = curPlayers.map(async p => {
         const guess = p.last_guess;
         const streakBefore = p.streak || 0;
@@ -2580,7 +2695,32 @@
           last_guess: null
         };
 
-        await supabase.from("hl_players").update(updatePayload).eq("id", p.id);
+        let query = supabase.from("hl_players").update(updatePayload).eq("id", p.id);
+        if (guess) query = query.eq("last_guess", guess);
+        else query = query.is("last_guess", null);
+        const { data: updatedRow, error: updateErr } = await query.select().single();
+        if (updateErr || !updatedRow) {
+          devLog("round-player-skip", {
+            round: roundNumber,
+            player: p.id,
+            reason: updateErr ? updateErr.message : "noop",
+            guess
+          });
+          resolvedPlayers.push(p);
+          return;
+        }
+        resolvedPlayers.push(updatedRow || { ...p, ...updatePayload });
+        devLog("round-player", {
+          round: roundNumber,
+          player: p.id,
+          guess,
+          correct,
+          baseScore,
+          finalScore,
+          streakAfter,
+          shieldUsed,
+          serverUpdatedAt: updatedRow?.updated_at
+        });
 
         if (!guess) {
           log(t.logNoGuess(p.name));
@@ -2598,6 +2738,11 @@
 
       await Promise.all(updates);
 
+      if (resolvedPlayers.length) {
+        players = resolvedPlayers;
+        scheduleUIUpdate();
+      }
+
       playRevealSound();
       log(t.logRoundResult(current, next));
 
@@ -2614,7 +2759,29 @@
         p => (p.score || 0) <= VERY_LOW_SCORE
       );
 
+      devLog("round-resolve-outcome", {
+        round: roundNumber,
+        next,
+        winner: winner?.id,
+        everyoneLow,
+        serverCheckedAt: new Date().toISOString()
+      });
+
       if (winner || everyoneLow) {
+        devLog("winner-computed", {
+          by: "host",
+          round: roundNumber,
+          winner: winner?.id,
+          everyoneLow,
+          ts: new Date().toISOString()
+        });
+        currentGame = {
+          ...currentGame,
+          status: "finished",
+          ended_at: new Date().toISOString(),
+          current_card: next,
+          deadline_at: null
+        };
         const { data, error: gErr } = await supabase
           .from("hl_games")
           .update({
@@ -2643,6 +2810,12 @@
         guessStart.getTime() + freshGame.time_limit_seconds * 1000
       );
 
+      currentGame = {
+        ...currentGame,
+        current_card: next,
+        round_number: roundNumber + 1,
+        deadline_at: deadline.toISOString()
+      };
       const { data: newGame, error: updErr } = await supabase
         .from("hl_games")
         .update({
@@ -2750,6 +2923,44 @@
     attachRealtime(game.id);
     await fetchPlayers(game.id);
   }
+
+  // audio ui bindings
+  const volumeSlider = document.getElementById("volume-slider");
+  const muteToggleBtn = document.getElementById("mute-toggle");
+  if (volumeSlider) {
+    volumeSlider.value = audioSettings.volume;
+    volumeSlider.addEventListener("input", e => {
+      const val = parseFloat(e.target.value);
+      setVolume(val);
+      if (audioSettings.muted && val > 0) {
+        audioSettings.muted = false;
+        updateAudioGain();
+        if (muteToggleBtn) muteToggleBtn.textContent = "🔊";
+      }
+    });
+  }
+  if (muteToggleBtn) {
+    muteToggleBtn.textContent = audioSettings.muted ? "🔇" : "🔊";
+    muteToggleBtn.addEventListener("click", () => {
+      toggleMute();
+      if (volumeSlider && audioSettings.muted && parseFloat(volumeSlider.value) > 0) {
+        volumeSlider.dataset.prev = volumeSlider.value;
+        volumeSlider.value = 0;
+      } else if (volumeSlider && !audioSettings.muted && volumeSlider.dataset.prev) {
+        volumeSlider.value = volumeSlider.dataset.prev;
+      }
+    });
+  }
+
+  window.addEventListener("online", () => {
+    log(currentLang === "tr" ? "Bağlantı geri geldi." : "Connection restored.");
+    resyncState();
+  });
+  window.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      resyncState();
+    }
+  });
 
   // Events
   document.getElementById("create-game-btn").onclick = createGame;
